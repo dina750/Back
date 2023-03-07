@@ -1,6 +1,8 @@
 import express from 'express'
 import asyncHandler from 'express-async-handler'
+import { generateOTP } from '../utils/mail.js';
 import User from './../models/userModel.js';
+import VerificationToken from './../models/verificationToken';
 import generateToken from './../utils/genarateToken.js'
 
 // @desc    Auth user & token
@@ -44,8 +46,14 @@ const registerUser = asyncHandler(async (req, res) => {
         email,
         password,
         cropSelection
-    })
-
+    });
+const OTP = generateOTP()
+const verificationToken = new VerificationToken({
+    owner:User._id,
+    token: OTP
+})
+await verificationToken.save();
+ 
     if (user) {
         res.status(201).json({
             _id: user._id,
@@ -59,6 +67,7 @@ const registerUser = asyncHandler(async (req, res) => {
         res.status(400)
         throw new Error('Invalid user data')
     }
+
 })
 
 // @desc    GET user profile
@@ -173,6 +182,8 @@ const updateUser = asyncHandler(async (req, res) => {
         throw new Error('User not found!!')
     }
 })
+
+
 
 export {
     authUser,
