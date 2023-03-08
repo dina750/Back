@@ -3,20 +3,23 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const speakeasy = require('speakeasy');
-const QRCode = require('qrcode');
-const uuid =require('uuid');
-const {JsonDB} = require('node-json-db');
-const {Config} = require('node-json-db/dist/lib/JsonDBConfig');
+
+
+
+
 require("dotenv").config()
 const http=require("http");
 const mongoose=require("mongoose");
+
+
+//ROUTES
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 
 var app = express();
-const db= new JsonDB(new Config('myDatabase', true, false, '/'));
+
+//MONGOOSE
 mongoose.set('strictQuery',true)
 mongoose.connect("mongodb://localhost:27017/Efarm",{UserNewUrlParser: true})
 .then(()=>{console.log("connected to DB")})
@@ -58,21 +61,24 @@ const server=http.createServer(app);
 server.listen(process.env.PORT,()=>{
   console.log(`app is running on port 5000`);
 })
-//  2 FACTOR AUTHENTIFICATION / USING TOTP (Timebased One Time Password) / CREATING TEMP SCRET
-// Generate a secret key
-const secret = speakeasy.generateSecret({ length: 20 });
+// //  2 FACTOR AUTHENTIFICATION / USING TOTP (Timebased One Time Password) / CREATING TEMP SCRET
+// // Generate a secret key
+// const secret = speakeasy.generateSecret({ length: 20 });
+// // Generate a QR code URL for the secret key (to be displayed to the user)
+// QRCode.toDataURL(secret.otpauth_url, function(err, imageUrl) {
+//   console.log(imageUrl);
+// });
+// // Verify a TOTP code
+// const token = req.body.token; // user.get(secretcode)
+// const verified = speakeasy.totp.verify({
+//   secret: secret.base32,
+//   encoding: 'base32',
+//   token: token
+// });
+// console.log(JSON.stringify(verified));
 
-// Generate a QR code URL for the secret key (to be displayed to the user)
-QRCode.toDataURL(secret.otpauth_url, function(err, imageUrl) {
-  console.log(imageUrl);
-});
-// Verify a TOTP code
-const token = '123456'; // user.get(secretcode)
-const verified = speakeasy.totp.verify({
-  secret: secret.base32,
-  encoding: 'base32',
-  token: token
-});
-console.log(verified);
+
+
+
 
 module.exports = app;
