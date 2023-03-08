@@ -7,11 +7,8 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
-const http = require('http');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
-const uuid =require('uuid');
 const {JsonDB} = require('node-json-db');
 const {Config} = require('node-json-db/dist/lib/JsonDBConfig');
 require("dotenv").config()
@@ -112,11 +109,6 @@ app.post('/verify', (req, res) => {
     res.status(400).send('Invalid verification code');
   }
 });
-server.listen(5000, ()=>{
-  console.log("app is running on port 5000");
-  res.json(err.message);
-});
-console.log(process.env.PORT)
 
 server.listen(process.env.PORT,()=>{
   console.log(`app is running on port 5000`);

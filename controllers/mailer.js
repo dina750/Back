@@ -6,8 +6,8 @@ const juice = require('juice');
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'efarmer.esprit@gmail.com',
-    pass: 'techphantoms'
+    user: 'amine.elj@esprit.tn',
+    pass: '213JMT7861'
   }
 });
 
