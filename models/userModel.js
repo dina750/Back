@@ -23,6 +23,12 @@ const userSchema = mongoose.Schema({
         required: true,
         default: false
     },
+    twoFactorAuthSecret:{
+        type: String,
+        required: false,
+        default: false
+    }
+    
 }, {
     timestamps: true
 })
