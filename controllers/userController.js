@@ -4,29 +4,49 @@ import { generateOTP } from '../utils/mail.js';
 import User from './../models/userModel.js';
 import VerificationToken from './../models/verificationToken';
 import generateToken from './../utils/genarateToken.js'
+import speakeasy from 'speakeasy'
+import QRCode from 'qrcode'
 
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
 const authUser = asyncHandler(async (req, res) => {
     const { email, password } = req.body
-
+  
     const user = await User.findOne({ email })
-
+  
     if (user && (await user.matchPassword(password))) {
-        res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            cropSelection: user.cropSelection,
-            token: generateToken(user._id)
-        })
+      // Generate a secret key for the user
+      const secret = speakeasy.generateSecret({ length: 20 })
+  
+      // Save the secret key to the user's account
+      user.twoFactorAuthSecret = secret.base32
+      await user.save()
+  
+      // Generate a QR code URL for the user to scan with their authenticator app
+      const qrCodeUrl = speakeasy.otpauthURL({
+        secret: secret.ascii,
+        label: `${user.name} (${user.email})`,
+        issuer: 'My App',
+        algorithm: 'SHA1'
+      })
+  
+      // Generate the QR code image and send it to the client
+      const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
+      res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        cropSelection: user.cropSelection,
+        qrCodeImage,
+        token: generateToken(user._id)
+      })
     } else {
-        res.status(401)
-        throw new Error('Invalid email or password')
+      res.status(401)
+      throw new Error('Invalid email or password')
     }
-})
+  })
 
 // @desc    Register new user
 // @rout    POST /api/users/
@@ -193,5 +213,6 @@ export {
     getUsers,
     deleteUser,
     getUserById,
-    updateUser
+    updateUser,
+    
 }
