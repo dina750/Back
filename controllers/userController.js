@@ -50,7 +50,7 @@ const authUser = asyncHandler(async (req, res) => {
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password, cropSelection } = req.body
+    const { name, email, password } = req.body
 
     const userExists = await User.findOne({ email })
 
@@ -63,7 +63,6 @@ const registerUser = asyncHandler(async (req, res) => {
         name,
         email,
         password,
-        cropSelection
     })
 
     if (user) {
@@ -71,7 +70,6 @@ const registerUser = asyncHandler(async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
-            cropSelection: user.cropSelection,
             isAdmin: user.isAdmin,
             token: generateToken(user._id)
         })
@@ -144,6 +142,8 @@ const getUsers = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
     const user = await User.findById(req.params.id)
+
+    console.log(user) // check if user is null
 
     if (user) {
         await user.remove()
