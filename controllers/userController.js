@@ -29,22 +29,22 @@ const transporter = nodemailer.createTransport({
       theme: 'default',
       product: {
         name: 'My App',
-        link: 'http://myapp.com',
+      link: 'http://myapp.com',
       },
     });
   
 
     // create email template
-const email = {
+const email = { 
     body: {
-      name: user.name,
-      intro: 'Welcome to My App! We are excited to have you on board.',
+      name: user.token,
+      intro: 'Welcome to Efarm! We are excited to have you on board.',
       action: {
         instructions: 'To confirm your account, please click the button below:',
         button: {
           color: '#22BC66',
           text: 'Confirm your account',
-          link: `http://myapp.com/api/users/confirm/${user.token}`,
+          link: `http://localhost:5000/api/users/confirm/${user.token}`,
         },
       },
       outro: 'If you have any questions, just reply to this email.',
@@ -124,7 +124,6 @@ const authUser = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       secret: user.secret,
-      token: generateToken(user._id),
     });
   } else {
     res.status(401);
@@ -162,15 +161,19 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   let secret = "";
   secret = speakeasy.generateSecret({ length: 20 }).base32;
+  
   const user = await User.create({
     name,
     email,
     password,
     secret,
+    
+
   });
+  
 
   // send confirmation email
-  await sendConfirmationEmail(user);
+  
 
   if (user) {
     res.status(201).json({
@@ -178,8 +181,8 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
-      token: generateToken(user._id),
     });
+    await sendConfirmationEmail(user);
   } else {
     res.status(400);
     throw new Error("Invalid user data");
