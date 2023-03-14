@@ -37,6 +37,7 @@ const authUser = asyncHandler(async (req, res) => {
         email: user.email,
         isAdmin: user.isAdmin,
         cropSelection: user.cropSelection,
+        twoFactorAuthSecret:user.twoFactorAuthSecret,
         qrCodeImage,
         token: generateToken(user._id)
       })
@@ -74,11 +75,30 @@ const registerUser = asyncHandler(async (req, res) => {
             cropSelection: user.cropSelection,
             isAdmin: user.isAdmin,
             token: generateToken(user._id)
+            .redirect('second')
         })
     } else {
         res.status(400)
         throw new Error('Invalid user data')
     }
+})
+
+//route POST /api/users/second
+const twoFactorAuth = asyncHandler(async (req,res)=>{
+    const user= await User.findById(req.user._id);
+    const token = req.body.twoFactorAuthSecret; // 
+    const verified = speakeasy.totp.verify({
+    secret: secret.base32,
+    encoding: 'base32',
+    token: token,
+    })
+    if (verified){
+        res.json("2factor auth success!");
+    }
+    else{
+        res.json("incorrect secret code!")
+    }
+
 })
 
 // @desc    GET user profile
@@ -203,5 +223,5 @@ export {
     deleteUser,
     getUserById,
     updateUser,
-    
+    twoFactorAuth
 }
