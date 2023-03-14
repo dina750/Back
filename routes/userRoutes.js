@@ -13,6 +13,7 @@ import {
     forget_password,
     reset_password
 } from '../controllers/userController.js'
+import twofactor from '../utils/twofactor.js'
 import { protect, admin } from './../middleware/authMiddleware.js'
 
 router.route('/').post(registerUser).get(protect, admin, getUsers)

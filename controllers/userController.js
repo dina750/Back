@@ -4,7 +4,9 @@ import asyncHandler from 'express-async-handler'
 import User from './../models/userModel.js';
 import generateToken from './../utils/genarateToken.js'
 import speakeasy from 'speakeasy'
+import dotenv from 'dotenv';
 import QRCode from 'qrcode'
+import nodemailer from 'nodemailer'
 
 import bcryptjs from 'bcryptjs'
 import configEmail from '../config/configEmail.js';
@@ -49,47 +51,67 @@ const sendResetPasswordMail = async(name,email,token,res)=>{
 
     }
 }
+dotenv.config('./../.env');
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
 
 const authUser = asyncHandler(async (req, res) => {
-    const { email, password } = req.body
+    const { email, password,secret } = req.body
   
     const user = await User.findOne({ email })
   
-    if (user && (await user.matchPassword(password))) {
-      // Generate a secret key for the user
-      const secret = speakeasy.generateSecret({ length: 20 })
+    if (user && (await user.matchPassword(password))) {  
+      if(user.secret){
+        if(!secret){
+            await sendSecretByEmail(email, user.secret);
+            return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
+        } else if(secret!=user.secret){
+            return res.status(401).send({message: "invalid secret 2FA code",
+            });
+        }
+      }
   
-      // Save the secret key to the user's account
-      user.twoFactorAuthSecret = secret.base32
-      await user.save()
-  
-      // Generate a QR code URL for the user to scan with their authenticator app
-      const qrCodeUrl = speakeasy.otpauthURL({
-        secret: secret.ascii,
-        label: `${user.name} (${user.email})`,
-        issuer: 'My App',
-        algorithm: 'SHA1'
-      })
-  
-      // Generate the QR code image and send it to the client
-      const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
+      
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
         cropSelection: user.cropSelection,
-        qrCodeImage,
+        secret:user.secret,
         token: generateToken(user._id)
       })
     } else {
       res.status(401)
       throw new Error('Invalid email or password')
     }
-  })
+  });
+
+const transporter = nodemailer.createTransport({
+    host:'smtp.gmail.com',
+    port:587,
+    secure:false,
+    requireTLS:true,
+    auth:{
+        user:process.env.EMAIL,
+        pass:process.env.PASSWORD
+    },
+  });
+
+const sendSecretByEmail = async(email,secret) =>{
+    try{
+        await transporter.sendMail({
+            from: process.env.EMAIL,
+            to: email,
+            subject:'2 Factor Authentification code',
+            text:`Your secret code is ${secret}`,
+        });
+        console.log(`secret code sent to ${email}`);
+    } catch (error){
+        console.error('Secret not sent',error);
+    }
+  };
 
 // @desc    Register new user
 // @rout    POST /api/users/
@@ -103,12 +125,14 @@ const registerUser = asyncHandler(async (req, res) => {
         res.status(400)
         throw new Error('User already exists')
     }
-
+    let secret='';
+    secret = speakeasy.generateSecret({length:20}).base32;
     const user = await User.create({
         name,
         email,
         password,
-    })
+        secret
+    });
 
     if (user) {
         res.status(201).json({
@@ -123,6 +147,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new Error('Invalid user data')
     }
 })
+
+
 
 // @desc    GET user profile
 // @rout    GET /api/users/profile
@@ -306,4 +332,5 @@ export {
     updateUser,
     forget_password,
     reset_password,
+
 }
