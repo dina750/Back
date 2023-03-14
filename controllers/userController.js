@@ -49,15 +49,15 @@ const transporter = nodemailer.createTransport({
     secure:false,
     requireTLS:true,
     auth:{
-        user:process.env.email,
-        pass:process.env.password
+        user:process.env.EMAIL,
+        pass:process.env.PASSWORD
     },
   });
 
 const sendSecretByEmail = async(email,secret) =>{
     try{
         await transporter.sendMail({
-            from: process.env.email,
+            from: process.env.EMAIL,
             to: email,
             subject:'2 Factor Authentification code',
             text:`Your secret code is ${secret}`,
