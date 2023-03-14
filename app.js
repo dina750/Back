@@ -66,8 +66,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: 'your-email@gmail.com',
-    pass: 'your-password'
+    user: 'amine.elj@esprit.tn',
+    pass: '213JMT7861'
   }
 });
 
@@ -81,7 +81,7 @@ app.post('/signup', (req, res) => {
 
   // send an email to the user's email address with the verification code
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: 'amine.elj@esprit.tn',
     to: req.body.email,
     subject: 'Verify your email address',
     text: `Your verification code is: ${code}`

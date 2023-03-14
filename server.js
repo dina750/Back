@@ -1,4 +1,4 @@
-import connectDB from './config/db.js';
+import connectDB from './../Back/config/db.js'
 import path from 'path'
 import express from 'express';
 import dotenv from 'dotenv';
@@ -9,7 +9,6 @@ import cookieSession from 'cookie-session';
 import userRoutes from './routes/userRoutes.js'
 import cors from 'cors'
 //2FA libraries
-import twofactor from './utils/twofactor.js';
 
 
 import { notFound, errorHandler } from './middleware/errorMiddlware.js'
@@ -139,33 +138,6 @@ app.get('/logout', function(req, res) {
 });
 
 
-// // Route for rendering the QR code image
-// app.get('/qr-code', async (req, res) => {
-//     const secret = twofactor.generateSecret();
-//     const qrCodeDataUrl = await twofactor.generateQRCode(secret);
-  
-//     res.json('qr-code', {
-//       qrCodeDataUrl,
-//       secret: secret.base32,
-//     });
-//   });
-  
-//   // Route for handling the submission of the 2FA code
-//   app.post('/login', (req, res) => {
-//     const token = req.body.token;
-//     const secret = req.body.secret;
-  
-//     const isValid = twofactor.validateToken(secret, token);
-  
-//     if (isValid) {
-//       // Successful login
-//       req.session.isAuthenticated = true;
-//       res.redirect('/dashboard');
-//     } else {
-//       // Invalid token
-//       res.status(401).send('Invalid token');
-//     }
-//   });
 
 const PORT = process.env.PORT || 3000;
 
