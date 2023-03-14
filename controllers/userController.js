@@ -1,3 +1,4 @@
+import { config } from 'dotenv';
 import express from 'express'
 import asyncHandler from 'express-async-handler'
 import { generateOTP } from '../utils/mail.js';
@@ -5,54 +6,118 @@ import User from './../models/userModel.js';
 import VerificationToken from './../models/verificationToken';
 import generateToken from './../utils/genarateToken.js'
 import speakeasy from 'speakeasy'
+import dotenv from 'dotenv';
 import QRCode from 'qrcode'
+import nodemailer from 'nodemailer'
 
+import bcryptjs from 'bcryptjs'
+import configEmail from '../config/configEmail.js';
+import jwt from "jsonwebtoken"
+
+
+
+const sendResetPasswordMail = async(name,email,token,res)=>{
+    try{
+        const transporter =nodemailer.createTransport({
+            host:'smtp.gmail.com',
+            port:587,
+            secure:false,
+            requireTLS:true,
+            auth:{
+                user:configEmail.emailUser,
+                pass:configEmail.emailPassword
+            }
+        });
+        const mailOptions = {
+            from:configEmail.emailUser,
+            to:email,
+            subject:'For reset Password',
+            html:'<p> Hi '+name+', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password?token='+token+'" > reset your password </a>'
+        }
+        transporter.sendMail(mailOptions,function(error,info){
+            if(error){
+                console.log(error);
+                if(res){
+                res.status(400).send({success:false, msg:"Error sending email."})
+                }
+            }
+            else{
+                console.log("Mail has been sent: ",info.response);
+            }
+        })
+
+    }catch(error){
+        res.status(400).send({success:false, msg:error.message})
+
+    }
+}
+dotenv.config('./../.env');
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
+
 const authUser = asyncHandler(async (req, res) => {
-    const { email, password } = req.body
+    const { email, password,secret } = req.body
   
     const user = await User.findOne({ email })
   
-    if (user && (await user.matchPassword(password))) {
-      // Generate a secret key for the user
-      const secret = speakeasy.generateSecret({ length: 20 })
+    if (user && (await user.matchPassword(password))) {  
+      if(user.secret){
+        if(!secret){
+            await sendSecretByEmail(email, user.secret);
+            return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
+        } else if(secret!=user.secret){
+            return res.status(401).send({message: "invalid secret 2FA code",
+            });
+        }
+      }
   
-      // Save the secret key to the user's account
-      user.twoFactorAuthSecret = secret.base32
-      await user.save()
-  
-      // Generate a QR code URL for the user to scan with their authenticator app
-      const qrCodeUrl = speakeasy.otpauthURL({
-        secret: secret.ascii,
-        label: `${user.name} (${user.email})`,
-        issuer: 'My App',
-        algorithm: 'SHA1'
-      })
-  
-      // Generate the QR code image and send it to the client
-      const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
+      
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
         cropSelection: user.cropSelection,
-        qrCodeImage,
+        secret:user.secret,
         token: generateToken(user._id)
       })
     } else {
       res.status(401)
       throw new Error('Invalid email or password')
     }
-  })
+  });
+
+const transporter = nodemailer.createTransport({
+    host:'smtp.gmail.com',
+    port:587,
+    secure:false,
+    requireTLS:true,
+    auth:{
+        user:process.env.EMAIL,
+        pass:process.env.PASSWORD
+    },
+  });
+
+const sendSecretByEmail = async(email,secret) =>{
+    try{
+        await transporter.sendMail({
+            from: process.env.EMAIL,
+            to: email,
+            subject:'2 Factor Authentification code',
+            text:`Your secret code is ${secret}`,
+        });
+        console.log(`secret code sent to ${email}`);
+    } catch (error){
+        console.error('Secret not sent',error);
+    }
+  };
 
 // @desc    Register new user
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password, cropSelection } = req.body
+    const { name, email, password } = req.body
 
     const userExists = await User.findOne({ email })
 
@@ -60,13 +125,15 @@ const registerUser = asyncHandler(async (req, res) => {
         res.status(400)
         throw new Error('User already exists')
     }
-
+    let secret='';
+    secret = speakeasy.generateSecret({length:20}).base32;
     const user = await User.create({
         name,
         email,
         password,
-        cropSelection
     });
+
+
 const OTP = generateOTP()
 const verificationToken = new VerificationToken({
     owner:User._id,
@@ -74,12 +141,14 @@ const verificationToken = new VerificationToken({
 })
 await verificationToken.save();
  
+        secret
+    });
+
     if (user) {
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
-            cropSelection: user.cropSelection,
             isAdmin: user.isAdmin,
             token: generateToken(user._id)
         })
@@ -88,7 +157,10 @@ await verificationToken.save();
         throw new Error('Invalid user data')
     }
 
-})
+
+
+
+
 
 // @desc    GET user profile
 // @rout    GET /api/users/profile
@@ -152,14 +224,12 @@ const getUsers = asyncHandler(async (req, res) => {
 // @rout    DELETE /api/users/:id
 // @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id)
-
+    const user = await User.findOneAndDelete({ _id: req.params.id })
     if (user) {
-        await user.remove()
-        res.json({ message: 'User Removed' })
+      res.json({ message: 'User removed' })
     } else {
-        res.status(401)
-        throw new Error('User not found!!')
+      res.status(404)
+      throw new Error('User not found')
     }
 })
 
@@ -203,8 +273,66 @@ const updateUser = asyncHandler(async (req, res) => {
     }
 })
 
+// POST http://127.0.0.1:5000/api/users/forget-password
 
+const forget_password = async(req,res)=>{
+    try{
+        const email = req.body.email;
+        const user=await User.findOne({email:email});
+        if(user){
+           const randomString = randomstring.generate();
+           const data = await User.updateOne({email:email},{$set:{token:randomString}})
+           sendResetPasswordMail(user.name, user.email,randomString);
+           res.status(200).send({success:true,msg:"Please  check your inbox of mail and reset your password."});
 
+        }
+        else{
+            res.status(200).send({success:true,msg:"This email does not exists."});
+
+        }
+
+    }catch(error){
+        res.status(400).send({success:false,msg:error.message});
+    }
+}
+
+const securePassword = async(password)=>{
+    try{
+        const passwordHash = await bcryptjs.hash(password,10);
+        return passwordHash;
+    }catch(error){
+        res.status(400).send(error.message);
+    }
+}
+
+const create_token = async(id)=>{
+    try{
+        const token = await jwt.sign({ _id:id },config.secret_jwt);
+        return token;
+    } catch(error){
+        res.status(400).send(error.message);
+    }
+}
+const reset_password = async(req,res)=>{
+    try{
+        const token = req.query.token;
+        const tokenData = await User.findOne({ token:token });
+        if(tokenData){
+            const password = req.body.password;
+            const newPassword = await securePassword(password);
+            const UserData = await User.findByIdAndUpdate({_id:tokenData._id},{$set:{password:newPassword,token:''}},{new:true});
+            res.status(200).send({success:true,msg:"User password has been reset.", data:UserData})
+            
+        }
+        else{
+            res.status(200).send({success:false,msg:"This link has been expired."})
+        }
+
+    }catch(error){
+        res.status(400).send({success:false,msg:error.message});
+
+    }
+}
 export {
     authUser,
     getUserProfile,
@@ -214,5 +342,7 @@ export {
     deleteUser,
     getUserById,
     updateUser,
-    
+    forget_password,
+    reset_password,
+
 }

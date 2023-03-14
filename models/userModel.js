@@ -18,12 +18,16 @@ const userSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    token:{
+        type:String,
+        default:''
+    },
     isAdmin: {
         type: Boolean,
         required: true,
         default: false
     },
-    twoFactorAuthSecret:{
+    secret:{
         type: String,
         required: false,
         default: false

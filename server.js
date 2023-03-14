@@ -107,6 +107,23 @@ app.get('/profile',  (req,res) => {
     });
 })
 
+app.post('/api/auth/google', async (req, res) => {
+    const { access_token } = req.body;
+    const client = new OAuth2Client(process.env.CLIENT_ID);
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: access_token,
+        audience: process.env.CLIENT_ID
+      });
+      const payload = ticket.getPayload();
+      // Handle the authenticated user
+      res.json({ user: payload });
+    } catch (error) {
+      console.error(error);
+      res.status(400).json({ error: 'Invalid access token' });
+    }
+  });
+
 app.get('/auth/facebook', passport.authenticate('facebook', { scope : 'email' }));
 
 app.get('/facebook/callback',
