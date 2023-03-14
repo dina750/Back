@@ -10,14 +10,13 @@ import {
     deleteUser,
     getUserById,
     updateUser,
-    twoFactorAuth
+    
 } from '../controllers/userController.js'
 import twofactor from '../utils/twofactor.js'
 import { protect, admin } from './../middleware/authMiddleware.js'
 
 router.route('/').post(registerUser).get(protect, admin, getUsers)
 router.post('/login', authUser)
-router.route('/second').post(twoFactorAuth)
 router
     .route('/profile')
     .get(protect, getUserProfile)

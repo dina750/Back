@@ -3,55 +3,76 @@ import asyncHandler from 'express-async-handler'
 import User from './../models/userModel.js';
 import generateToken from './../utils/genarateToken.js'
 import speakeasy from 'speakeasy'
+import dotenv from 'dotenv';
 import QRCode from 'qrcode'
+import nodemailer from 'nodemailer'
 
+dotenv.config('./../.env');
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
 const authUser = asyncHandler(async (req, res) => {
-    const { email, password } = req.body
+    const { email, password,secret } = req.body
   
     const user = await User.findOne({ email })
   
-    if (user && (await user.matchPassword(password))) {
-      // Generate a secret key for the user
-      const secret = speakeasy.generateSecret({ length: 20 })
+    if (user && (await user.matchPassword(password))) {  
+      if(user.secret){
+        if(!secret){
+            await sendSecretByEmail(email, user.secret);
+            return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
+        } else if(secret!=user.secret){
+            return res.status(401).send({message: "invalid secret 2FA code",
+            });
+        }
+      }
   
-      // Save the secret key to the user's account
-      user.twoFactorAuthSecret = secret.base32
-      await user.save()
-  
-      // Generate a QR code URL for the user to scan with their authenticator app
-      const qrCodeUrl = speakeasy.otpauthURL({
-        secret: secret.ascii,
-        label: `${user.name} (${user.email})`,
-        issuer: 'My App',
-        algorithm: 'SHA1'
-      })
-  
-      // Generate the QR code image and send it to the client
-      const qrCodeImage = await QRCode.toDataURL(qrCodeUrl)
+      
       res.json({
         _id: user._id,
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
         cropSelection: user.cropSelection,
-        twoFactorAuthSecret:user.twoFactorAuthSecret,
-        qrCodeImage,
+        secret:user.secret,
         token: generateToken(user._id)
       })
     } else {
       res.status(401)
       throw new Error('Invalid email or password')
     }
-  })
+  });
+
+const transporter = nodemailer.createTransport({
+    host:'smtp.gmail.com',
+    port:587,
+    secure:false,
+    requireTLS:true,
+    auth:{
+        user:process.env.email,
+        pass:process.env.password
+    },
+  });
+
+const sendSecretByEmail = async(email,secret) =>{
+    try{
+        await transporter.sendMail({
+            from: process.env.email,
+            to: email,
+            subject:'2 Factor Authentification code',
+            text:`Your secret code is ${secret}`,
+        });
+        console.log(`secret code sent to ${email}`);
+    } catch (error){
+        console.error('Secret not sent',error);
+    }
+  };
 
 // @desc    Register new user
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-    const { name, email, password, cropSelection } = req.body
+    const { name, email, password, } = req.body
 
     const userExists = await User.findOne({ email })
 
@@ -59,23 +80,22 @@ const registerUser = asyncHandler(async (req, res) => {
         res.status(400)
         throw new Error('User already exists')
     }
-
+    let secret='';
+    secret = speakeasy.generateSecret({length:20}).base32;
     const user = await User.create({
         name,
         email,
         password,
-        cropSelection
-    })
+        secret
+    });
 
     if (user) {
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
-            cropSelection: user.cropSelection,
             isAdmin: user.isAdmin,
             token: generateToken(user._id)
-            .redirect('second')
         })
     } else {
         res.status(400)
@@ -83,23 +103,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 })
 
-//route POST /api/users/second
-const twoFactorAuth = asyncHandler(async (req,res)=>{
-    const user= await User.findById(req.user._id);
-    const token = req.body.twoFactorAuthSecret; // 
-    const verified = speakeasy.totp.verify({
-    secret: secret.base32,
-    encoding: 'base32',
-    token: token,
-    })
-    if (verified){
-        res.json("2factor auth success!");
-    }
-    else{
-        res.json("incorrect secret code!")
-    }
 
-})
 
 // @desc    GET user profile
 // @rout    GET /api/users/profile
@@ -223,5 +227,4 @@ export {
     deleteUser,
     getUserById,
     updateUser,
-    twoFactorAuth
 }

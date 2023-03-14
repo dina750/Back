@@ -25,11 +25,12 @@
     "mongoose": "^7.0.1",
     "morgan": "~1.9.1",
     "node-json-db": "^2.1.4",
+    "nodemailer": "^6.9.1",
     "passport": "^0.6.0",
     "passport-facebook": "^3.0.0",
+    "passport-google-oauth2": "^0.2.0",
     "qrcode": "^1.5.1",
     "speakeasy": "^2.0.0",
-    "uuid": "^9.0.0",
-    "passport-google-oauth2": "^0.2.0"
+    "uuid": "^9.0.0"
   }
 }
