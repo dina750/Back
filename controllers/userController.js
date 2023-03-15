@@ -21,30 +21,21 @@ const authUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email })
     
     if (user && (await user.matchPassword(password)) && user.state) {  
-        if(twoFA){
-            if(user.secret){
-                if(!secret){
-                    await sendSecretByEmail(email, user.secret);
-                    return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
-                
-                } else if(secret!=user.secret){
-                    return res.status(401).send({message: "invalid secret 2FA code",
-                    });
-                }
-            }};
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        secret:user.secret,
-        token: generateToken(user._id)
-      })
-    } else {
-      res.status(401)
-      throw new Error('Invalid email or password')
-    }
-  });
+        
+            res.json({
+                _id: user._id,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                state:user.state,
+                token: generateToken(user._id),
+              });
+            } else {
+              res.status(401);
+              throw new Error("Invalid email or password or your account is not activated");
+            }
+          });
 
 // create nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -71,7 +62,7 @@ const sendConfirmationEmail = async (user,token) => {
     
     body: {
     
-      name: user.name,
+      name: user.firstname,
       intro: "Welcome to Efarm! We are excited to have you on board.",
       action: {
         instructions: "To confirm your account, please click the button below:",
@@ -123,7 +114,7 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
   });
 
 //this is a reset password Email format
-const sendResetPasswordMail = async (name, userId, email, token, res) => {
+const sendResetPasswordMail = async (firstname, userId, email, token, res) => {
   try {
     const mailOptions = {
       from: process.env.EMAIL,
@@ -131,7 +122,7 @@ const sendResetPasswordMail = async (name, userId, email, token, res) => {
       subject: "For reset Password",
      html: 
      "<p> Hi " + 
-     name + 
+     firstname + 
      ', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password/' + userId + '/' + token + '" > reset your password </a>',
 
     };
@@ -162,25 +153,16 @@ const sendResetPasswordMail = async (name, userId, email, token, res) => {
 
 //   if (user && (await user.matchPassword(password)) && user.state ) {
     
-//     res.json({
-//       _id: user._id,
-//       name: user.name,
-//       email: user.email,
-//       isAdmin: user.isAdmin,
-//       state:user.state,
-//       token: generateToken(user._id),
-//     });
-//   } else {
-//     res.status(401);
-//     throw new Error("Invalid email or password");
-//   }
-// });
+    
+
+
+
 
 // @desc    Register new user
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password,isAdmin, twoFA } = req.body;
+  const { firstname,lastname, email, password,isAdmin } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -192,7 +174,8 @@ const registerUser = asyncHandler(async (req, res) => {
   secret = speakeasy.generateSecret({ length: 20 }).base32;
 
   const user = await User.create({
-    name,
+    firstname,
+    lastname,
     email,
     isAdmin,
     password,
@@ -206,11 +189,14 @@ const registerUser = asyncHandler(async (req, res) => {
   console.log(token)
   // send confirmation email
   await sendConfirmationEmail(user,token);
-
+  if(user.twoFA){
+    await sendSecretByEmail(email, user.secret);
+    };
   if (user) {
     res.status(201).json({
       _id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
       isAdmin: user.isAdmin,
       state:user.state,
@@ -232,9 +218,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     res.json({
       _id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
-      cropSelection: user.cropSelection,
       isAdmin: user.isAdmin,
     });
   } else {
@@ -250,7 +236,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
   if (user) {
-    user.name = req.body.name || user.name;
+    user.firstname = req.body.firstname || user.firstname;
     user.email = req.body.email || user.email;
     
     if (req.body.password) {
@@ -261,7 +247,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     res.json({
       _id: updatedUser._id,
-      name: updatedUser.name,
+      firstname: updateUser.firstname,
+      lastname: updateUser.lastname,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
       token: generateToken(updatedUser._id),
@@ -313,19 +300,20 @@ const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user) {
-    user.name = req.body.name || user.name;
+    user.firstname = req.body.firstname || user.firstname;
+    user.lastname = req.body.lastname || user.lastname;
     user.email = req.body.email || user.email;
-    user.cropSelection = req.body.cropSelection || user.cropSelection;
     user.isAdmin = req.body.isAdmin;
-
+    user.state = req.body.state;
     const updatedUser = await user.save();
 
     res.json({
       _id: updatedUser._id,
-      name: updatedUser.name,
+      firstname: updatedUser.firstname,
+      lastname: updatedUser.lastname,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
-      cropSelection: updatedUser.cropSelection,
+      state:updateUser.state,
     });
   } else {
     res.status(401);
@@ -335,12 +323,14 @@ const updateUser = asyncHandler(async (req, res) => {
 
 // POST http://127.0.0.1:5000/api/users/forget-password
 const forget_password = async (req, res) => {
+
   try {
     const email = req.body.email;
     const user = await User.findOne({ email: email });
+    const id =user.userId
     if (user) {
       
-      sendResetPasswordMail(user.name, userId, user.email, user.token);
+      sendResetPasswordMail(user.firstname, id, user.email, user.token);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",
