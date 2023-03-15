@@ -354,8 +354,6 @@ const resetPassword = asyncHandler(async (req, res) => {
     res.status(401);
     throw new Error('Invalid or expired token');
   }
-
-  res.redirect('/api/users/update-password');
 });
 
 
