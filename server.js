@@ -7,6 +7,7 @@ import colors from 'colors'
 import passport from 'passport';
 import cookieSession from 'cookie-session';
 import userRoutes from './routes/userRoutes.js'
+import functionRouter from './routes/functionRoutes.js';
 import cors from 'cors'
 //2FA libraries
 
@@ -32,6 +33,7 @@ app.use(cors({
 }));
 
 app.use('/api/users', userRoutes);
+//app.use('/users',functionRouter);
 
 
 

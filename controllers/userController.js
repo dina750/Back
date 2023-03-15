@@ -9,6 +9,7 @@ import Mailgen from "mailgen";
 import speakeasy from "speakeasy"
 import dotenv from 'dotenv'
 dotenv.config()
+import mongoose from 'mongoose'
 
 
 // create nodemailer transporter
@@ -88,18 +89,17 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
   });
 
 //this is a reset password Email format
-const sendResetPasswordMail = async (name, email, token, res) => {
+const sendResetPasswordMail = async (name, userId, email, token, res) => {
   try {
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
       subject: "For reset Password",
-      html:
-        "<p> Hi " +
-        name +
-        ', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password?token=' +
-        token +
-        '" > reset your password </a>',
+     html: 
+     "<p> Hi " + 
+     name + 
+     ', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password/' + userId + '/' + token + '" > reset your password </a>',
+
     };
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
@@ -304,7 +304,7 @@ const forget_password = async (req, res) => {
     const user = await User.findOne({ email: email });
     if (user) {
       
-      sendResetPasswordMail(user.name, user.email, user.token);
+      sendResetPasswordMail(user.name, userId, user.email, user.token);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",
@@ -328,52 +328,67 @@ const securePassword = async (password) => {
   }
 };
 
+const reset2 = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+
+  log.console("this is a reset",token)
+
+
+  
+});
+
 //this is the reset password method
 const resetPassword = asyncHandler(async (req, res) => {
-    const { token } = req.params;
+  const { userId } = req.params;
 
-    if (!token) {
-      res.status(401);
-      throw new Error('Token is missing');
-    }
-    console.log("this is the url token ",token)
-    
-    const user = await User.findOne({ token: token });
-  
-    if (!user) {
-      res.status(401);
-      throw new Error('Invalid or expired token');
-    }
-  
-    res.render('reset-password', { token });
-  });
+  if (!userId) {
+    res.status(401);
+    throw new Error('User ID is missing');
+  }
+
+  console.log("This is the user ID: ", userId);
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    res.status(401);
+    throw new Error('Invalid or expired token');
+  }
+
+  res.redirect('/api/users/update-password');
+});
+
+
+
+
+
 
 
 //updating the password
-  const updatePassword = asyncHandler(async (req, res) => {
-    const { token } = req.body;
-  
-    if (!token) {
-      res.status(400);
-      throw new Error('Token is required');
-    }
-  
-    const user = await User.findOne({ token: token });
-  
-    if (!user) {
-      res.status(401);
-      throw new Error('Invalid or expired token');
-    }
-  
-    const { password } = req.body;
-  
-    user.password = password;
-    user.resetPasswordToken = null;
-  
-    await user.save();
-  
-    res.status(200).json({ success: true, msg: 'Password updated successfully' });
+const updatePassword = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  const userId = req.params.userId;
+
+  if (!password) {
+    res.status(400);
+    throw new Error('Password is required');
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  user.password = password;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Password updated successfully',
   });
+});
   
 
 //this is sending the secret code by email
@@ -403,4 +418,5 @@ export {
   confirmUserAccount,
   resetPassword,
   updatePassword,
+  reset2,
 };
