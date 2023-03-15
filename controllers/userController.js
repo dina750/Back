@@ -138,9 +138,12 @@ const authUser = asyncHandler(async (req, res) => {
     });
   } else {
     res.status(401);
-    throw new Error("Invalid email or password");
+    throw new Error("Invalid email or password or your account is not activated");
   }
 });
+
+
+
 
 // @desc    Register new user
 // @rout    POST /api/users/
@@ -299,12 +302,14 @@ const updateUser = asyncHandler(async (req, res) => {
 
 // POST http://127.0.0.1:5000/api/users/forget-password
 const forget_password = async (req, res) => {
+
   try {
     const email = req.body.email;
     const user = await User.findOne({ email: email });
+    const id =user.userId
     if (user) {
       
-      sendResetPasswordMail(user.name, userId, user.email, user.token);
+      sendResetPasswordMail(user.name, id, user.email, user.token);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",
