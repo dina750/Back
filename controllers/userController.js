@@ -37,7 +37,7 @@ const sendConfirmationEmail = async (user,token) => {
     
     body: {
     
-      name: user.name,
+      name: user.firstname,
       intro: "Welcome to Efarm! We are excited to have you on board.",
       action: {
         instructions: "To confirm your account, please click the button below:",
@@ -89,7 +89,7 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
   });
 
 //this is a reset password Email format
-const sendResetPasswordMail = async (name, userId, email, token, res) => {
+const sendResetPasswordMail = async (firstname, userId, email, token, res) => {
   try {
     const mailOptions = {
       from: process.env.EMAIL,
@@ -97,7 +97,7 @@ const sendResetPasswordMail = async (name, userId, email, token, res) => {
       subject: "For reset Password",
      html: 
      "<p> Hi " + 
-     name + 
+     firstname + 
      ', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password/' + userId + '/' + token + '" > reset your password </a>',
 
     };
@@ -130,7 +130,8 @@ const authUser = asyncHandler(async (req, res) => {
     
     res.json({
       _id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
       isAdmin: user.isAdmin,
       state:user.state,
@@ -149,7 +150,7 @@ const authUser = asyncHandler(async (req, res) => {
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password,isAdmin } = req.body;
+  const { firstname,lastname, email, password,isAdmin } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -161,7 +162,8 @@ const registerUser = asyncHandler(async (req, res) => {
   secret = speakeasy.generateSecret({ length: 20 }).base32;
 
   const user = await User.create({
-    name,
+    firstname,
+    lastname,
     email,
     isAdmin,
     password,
@@ -178,7 +180,8 @@ const registerUser = asyncHandler(async (req, res) => {
   if (user) {
     res.status(201).json({
       _id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
       isAdmin: user.isAdmin,
       state:user.state,
@@ -199,9 +202,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     res.json({
       _id: user._id,
-      name: user.name,
+      firstname: user.firstname,
+      lastname: user.lastname,
       email: user.email,
-      cropSelection: user.cropSelection,
       isAdmin: user.isAdmin,
     });
   } else {
@@ -217,7 +220,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
   if (user) {
-    user.name = req.body.name || user.name;
+    user.firstname = req.body.firstname || user.firstname;
     user.email = req.body.email || user.email;
     
     if (req.body.password) {
@@ -228,7 +231,8 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     res.json({
       _id: updatedUser._id,
-      name: updatedUser.name,
+      firstname: updateUser.firstname,
+      lastname: updateUser.lastname,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
       token: generateToken(updatedUser._id),
@@ -280,19 +284,20 @@ const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
   if (user) {
-    user.name = req.body.name || user.name;
+    user.firstname = req.body.firstname || user.firstname;
+    user.lastname = req.body.lastname || user.lastname;
     user.email = req.body.email || user.email;
-    user.cropSelection = req.body.cropSelection || user.cropSelection;
     user.isAdmin = req.body.isAdmin;
-
+    user.state = req.body.state;
     const updatedUser = await user.save();
 
     res.json({
       _id: updatedUser._id,
-      name: updatedUser.name,
+      firstname: updatedUser.firstname,
+      lastname: updatedUser.lastname,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
-      cropSelection: updatedUser.cropSelection,
+      state:updateUser.state,
     });
   } else {
     res.status(401);
@@ -309,7 +314,7 @@ const forget_password = async (req, res) => {
     const id =user.userId
     if (user) {
       
-      sendResetPasswordMail(user.name, id, user.email, user.token);
+      sendResetPasswordMail(user.firstname, id, user.email, user.token);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",

@@ -3,9 +3,8 @@ var router = express.Router();
 var mailer = require('../controllers/mailer')
 
 /* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
-});
+router.get('/reset-password/:id',resetPassword)
+
 
 
 
