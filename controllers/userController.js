@@ -17,7 +17,7 @@ dotenv.config('./../.env');
 // @access  public
 const authUser = asyncHandler(async (req, res) => {
     
-    const { email, password,twoFA, secret} = req.body
+    const { email, password} = req.body
     const user = await User.findOne({ email })
     
     if (user && (await user.matchPassword(password)) && user.state) {  
