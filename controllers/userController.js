@@ -91,7 +91,7 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
 const sendResetPasswordMail = async (name, email, token, res) => {
   try {
     const mailOptions = {
-      from: configEmail.emailUser,
+      from: process.env.EMAIL,
       to: email,
       subject: "For reset Password",
       html:
@@ -303,12 +303,8 @@ const forget_password = async (req, res) => {
     const email = req.body.email;
     const user = await User.findOne({ email: email });
     if (user) {
-      const randomString = randomstring.generate();
-      const data = await User.updateOne(
-        { email: email },
-        { $set: { token: randomString } }
-      );
-      sendResetPasswordMail(user.name, user.email, randomString);
+      
+      sendResetPasswordMail(user.name, user.email, user.token);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",
@@ -333,32 +329,52 @@ const securePassword = async (password) => {
 };
 
 //this is the reset password method
-const reset_password = async (req, res) => {
-  try {
-    const token = req.query.token;
-    const tokenData = await User.findOne({ token: token });
-    if (tokenData) {
-      const password = req.body.password;
-      const newPassword = await securePassword(password);
-      const UserData = await User.findByIdAndUpdate(
-        { _id: mongoose.Types.ObjectId(tokenData._id) }, // Cast the _id to ObjectId
-        { $set: { password: newPassword, token: "" } },
-        { new: true }
-      );
-      res.status(200).send({
-        success: true,
-        msg: "User password has been reset.",
-        data: UserData,
-      });
-    } else {
-      res
-        .status(200)
-        .send({ success: false, msg: "This link has been expired." });
+const resetPassword = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    if (!token) {
+      res.status(401);
+      throw new Error('Token is missing');
     }
-  } catch (error) {
-    res.status(400).send({ success: false, msg: error.message });
-  }
-};
+    console.log("this is the url token ",token)
+    
+    const user = await User.findOne({ token: token });
+  
+    if (!user) {
+      res.status(401);
+      throw new Error('Invalid or expired token');
+    }
+  
+    res.render('reset-password', { token });
+  });
+
+
+//updating the password
+  const updatePassword = asyncHandler(async (req, res) => {
+    const { token } = req.body;
+  
+    if (!token) {
+      res.status(400);
+      throw new Error('Token is required');
+    }
+  
+    const user = await User.findOne({ token: token });
+  
+    if (!user) {
+      res.status(401);
+      throw new Error('Invalid or expired token');
+    }
+  
+    const { password } = req.body;
+  
+    user.password = password;
+    user.resetPasswordToken = null;
+  
+    await user.save();
+  
+    res.status(200).json({ success: true, msg: 'Password updated successfully' });
+  });
+  
 
 //this is sending the secret code by email
 const sendSecretByEmail = async (email, secret) => {
@@ -384,6 +400,7 @@ export {
   getUserById,
   updateUser,
   forget_password,
-  reset_password,
   confirmUserAccount,
+  resetPassword,
+  updatePassword,
 };
