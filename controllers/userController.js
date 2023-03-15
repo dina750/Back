@@ -162,7 +162,7 @@ const sendResetPasswordMail = async (firstname, userId, email, token, res) => {
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-  const { firstname,lastname, email, password,isAdmin } = req.body;
+  const { firstname,lastname, email, password, isAdmin, twoFA } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -200,7 +200,8 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       isAdmin: user.isAdmin,
       state:user.state,
-      token,
+      twoFA:user.twoFA,
+      token
       
     });
   } else {
