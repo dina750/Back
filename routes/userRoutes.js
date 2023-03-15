@@ -12,6 +12,7 @@ import {
     updateUser,
     forget_password,
     reset_password,
+    confirmUserAccount ,
 
 } from '../controllers/userController.js'
 import { protect, admin } from './../middleware/authMiddleware.js'
@@ -27,13 +28,13 @@ router
     .delete(protect, admin, deleteUser)
     .get(protect, admin, getUserById)
     .put(protect, admin, updateUser)
-
 //update password route
-
 router.post('/forget-password',forget_password);
+//Confirm user account
+router.get('/confirm/:token', confirmUserAccount);
 
 
 
-
+//reset password
 router.get('/reset-password',reset_password)
 export default router

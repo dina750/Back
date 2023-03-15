@@ -1,70 +1,91 @@
-import { config } from "dotenv";
-import express from "express";
 import asyncHandler from "express-async-handler";
 import User from "./../models/userModel.js";
-import VerificationToken from "./../models/verificationToken.js";
 import generateToken from "./../utils/generateToken.js";
-import speakeasy from "speakeasy";
-import dotenv from "dotenv";
 import nodemailer from "nodemailer";
 import bcryptjs from "bcryptjs";
 import configEmail from "../config/configEmail.js";
 import jwt from "jsonwebtoken";
 import Mailgen from "mailgen";
+import speakeasy from "speakeasy"
+import dotenv from 'dotenv'
+dotenv.config()
 
-dotenv.config("./../.env");
 
 // create nodemailer transporter
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.PASSWORD,
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.PASSWORD,
+  },
+});
+
+//Send the confirmation email
+const sendConfirmationEmail = async (user,token) => {
+  // create mail generator
+  const mailGenerator = new Mailgen({
+    theme: "default",
+    product: {
+      name: "My App",
+      link: "http://myapp.com",
     },
   });
-  
-  const sendConfirmationEmail = async (user) => {
-    // create mail generator
-    const mailGenerator = new Mailgen({
-      theme: 'default',
-      product: {
-        name: 'My App',
-      link: 'http://myapp.com',
-      },
-    });
-  
 
-    // create email template
-const email = { 
+  // create email template
+  const email = {
+    
     body: {
-      name: user.token,
-      intro: 'Welcome to Efarm! We are excited to have you on board.',
+    
+      name: user.name,
+      intro: "Welcome to Efarm! We are excited to have you on board.",
       action: {
-        instructions: 'To confirm your account, please click the button below:',
+        instructions: "To confirm your account, please click the button below:",
         button: {
-          color: '#22BC66',
-          text: 'Confirm your account',
-          link: `http://localhost:5000/api/users/confirm/${user.token}`,
+          color: "#22BC66",
+          text: "Confirm your account",
+          link: `http://localhost:5000/api/users/confirm/${token}`,
         },
       },
-      outro: 'If you have any questions, just reply to this email.',
+      outro: "If you have any questions, just reply to this email.",
     },
   };
+  
+  // generate email content
+  const emailBody = mailGenerator.generate(email);
 
-// generate email content
-const emailBody = mailGenerator.generate(email);
-
-//options for the email such title and body
-const mailOptions = {
+  //options for the email such title and body
+  const mailOptions = {
     from: process.env.EMAIL,
     to: user.email,
-    subject: 'Confirm your account on My App',
+    subject: "Confirm your account on My App",
     html: emailBody,
   };
 
-// sending the email
-await transporter.sendMail(mailOptions);
-  };
+  // sending the email
+  await transporter.sendMail(mailOptions);
+};
+
+//this is the confirmation to the account 
+const confirmUserAccount = asyncHandler(async (req, res) => {
+    const { token } = req.params;
+
+    if (!token) {
+      res.status(401);
+      throw new Error('Token is missing');
+    }
+    console.log("this is the url token ",token)
+    const user = await User.findOne({ token});
+        console.log("this is the user token",user.token)
+    if (user) {
+      user.state = true;
+      await user.save();
+  
+      res.redirect('http://localhost:5000/api/users/login'); // or any other URL you want to redirect to after successful confirmation
+    } else {
+      res.status(401);
+      throw new Error('Invalid token');
+    }
+  });
 
 //this is a reset password Email format
 const sendResetPasswordMail = async (name, email, token, res) => {
@@ -95,35 +116,25 @@ const sendResetPasswordMail = async (name, email, token, res) => {
   }
 };
 
-
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
 
 const authUser = asyncHandler(async (req, res) => {
-  const { email, password, secret } = req.body;
+  const { email, password } = req.body;
 
   const user = await User.findOne({ email });
+  
 
-  if (user && (await user.matchPassword(password))) {
-    if (user.secret) {
-      if (!secret) {
-        await sendSecretByEmail(email, user.secret);
-        return res.json({
-          message:
-            "a new 2FA secret code has been sent, please login again and insert the secret code sent.",
-        });
-      } else if (secret != user.secret) {
-        return res.status(401).send({ message: "invalid secret 2FA code" });
-      }
-    }
-
+  if (user && (await user.matchPassword(password)) && user.state ) {
+    
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
-      secret: user.secret,
+      state:user.state,
+      token: generateToken(user._id),
     });
   } else {
     res.status(401);
@@ -131,27 +142,11 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-
-//this is sending the secret code by email
-const sendSecretByEmail = async (email, secret) => {
-  try {
-    await transporter.sendMail({
-      from: process.env.EMAIL,
-      to: email,
-      subject: "2 Factor Authentification code",
-      text: `Your secret code is ${secret}`,
-    });
-    console.log(`secret code sent to ${email}`);
-  } catch (error) {
-    console.error("Secret not sent", error);
-  }
-};
-
 // @desc    Register new user
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password,isAdmin } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -161,19 +156,21 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   let secret = "";
   secret = speakeasy.generateSecret({ length: 20 }).base32;
-  
+
   const user = await User.create({
     name,
     email,
+    isAdmin,
     password,
     secret,
-    
-
   });
-  
-
+  const token = generateToken(user._id);
+  user.token = token;
+  await user.save();
+    
+  console.log(token)
   // send confirmation email
-  
+  await sendConfirmationEmail(user,token);
 
   if (user) {
     res.status(201).json({
@@ -181,8 +178,9 @@ const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
+      state:user.state,
+      token,
     });
-    await sendConfirmationEmail(user);
   } else {
     res.status(400);
     throw new Error("Invalid user data");
@@ -218,7 +216,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-    user.cropSelection = req.body.cropSelection || user.cropSelection;
+    
     if (req.body.password) {
       user.password = req.body.password;
     }
@@ -230,7 +228,6 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       name: updatedUser.name,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
-      cropSelection: updatedUser.cropSelection,
       token: generateToken(updatedUser._id),
     });
   } else {
@@ -312,12 +309,10 @@ const forget_password = async (req, res) => {
         { $set: { token: randomString } }
       );
       sendResetPasswordMail(user.name, user.email, randomString);
-      res
-        .status(200)
-        .send({
-          success: true,
-          msg: "Please  check your inbox of mail and reset your password.",
-        });
+      res.status(200).send({
+        success: true,
+        msg: "Please  check your inbox of mail and reset your password.",
+      });
     } else {
       res
         .status(200)
@@ -337,16 +332,7 @@ const securePassword = async (password) => {
   }
 };
 
-const create_token = async (id) => {
-  try {
-    const token = await jwt.sign({ _id: id }, config.secret_jwt);
-    return token;
-  } catch (error) {
-    res.status(400).send(error.message);
-  }
-};
-
-
+//this is the reset password method
 const reset_password = async (req, res) => {
   try {
     const token = req.query.token;
@@ -355,17 +341,15 @@ const reset_password = async (req, res) => {
       const password = req.body.password;
       const newPassword = await securePassword(password);
       const UserData = await User.findByIdAndUpdate(
-        { _id: tokenData._id },
+        { _id: mongoose.Types.ObjectId(tokenData._id) }, // Cast the _id to ObjectId
         { $set: { password: newPassword, token: "" } },
         { new: true }
       );
-      res
-        .status(200)
-        .send({
-          success: true,
-          msg: "User password has been reset.",
-          data: UserData,
-        });
+      res.status(200).send({
+        success: true,
+        msg: "User password has been reset.",
+        data: UserData,
+      });
     } else {
       res
         .status(200)
@@ -376,7 +360,20 @@ const reset_password = async (req, res) => {
   }
 };
 
-
+//this is sending the secret code by email
+const sendSecretByEmail = async (email, secret) => {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: email,
+      subject: "2 Factor Authentification code",
+      text: `Your secret code is ${secret}`,
+    });
+    console.log(`secret code sent to ${email}`);
+  } catch (error) {
+    console.error("Secret not sent", error);
+  }
+};
 export {
   authUser,
   getUserProfile,
@@ -388,4 +385,5 @@ export {
   updateUser,
   forget_password,
   reset_password,
+  confirmUserAccount,
 };
