@@ -32,7 +32,7 @@ router.route('/profile')
 
 router.route('/:id')
     .delete(protect, admin, deleteUser)
-    .get(protect, admin, getUserById)
+    .get(protect, getUserById)
     .put(protect, admin, updateUser);
 
 // forget password route

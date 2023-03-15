@@ -30,6 +30,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: false,
         default: false
+    },
+    twoFA:{
+        type: Boolean,
+        default:false
     }
     
 }, {

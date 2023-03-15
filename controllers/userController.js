@@ -11,32 +11,27 @@ import dotenv from 'dotenv'
 dotenv.config()
 import mongoose from 'mongoose'
 
-<<<<<<< Updated upstream
-=======
 dotenv.config('./../.env');
 // @desc    Auth user & token
 // @rout    POST /api/users/login
 // @access  public
 const authUser = asyncHandler(async (req, res) => {
     
-    const { email, password, secret} = req.body
+    const { email, password,twoFA, secret} = req.body
     const user = await User.findOne({ email })
     
-    if (user && (await user.matchPassword(password))) {  
-      if(user.secret){
-        if(!secret){
-            await sendSecretByEmail(email, user.secret);
-            return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
-           
-        } else if(secret!=user.secret){
-            return res.status(401).send({message: "invalid secret 2FA code",
-            });
-        }
-      }
-   
-
-  
-      
+    if (user && (await user.matchPassword(password)) && user.state) {  
+        if(twoFA){
+            if(user.secret){
+                if(!secret){
+                    await sendSecretByEmail(email, user.secret);
+                    return res.json({ message : 'a new 2FA secret code has been sent, please login again and insert the secret code sent.'});
+                
+                } else if(secret!=user.secret){
+                    return res.status(401).send({message: "invalid secret 2FA code",
+                    });
+                }
+            }};
       res.json({
         _id: user._id,
         name: user.name,
@@ -50,7 +45,6 @@ const authUser = asyncHandler(async (req, res) => {
       throw new Error('Invalid email or password')
     }
   });
->>>>>>> Stashed changes
 
 // create nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -160,33 +154,33 @@ const sendResetPasswordMail = async (name, userId, email, token, res) => {
 // @rout    POST /api/users/login
 // @access  public
 
-const authUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+// const authUser = asyncHandler(async (req, res) => {
+//   const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+//   const user = await User.findOne({ email });
   
 
-  if (user && (await user.matchPassword(password)) && user.state ) {
+//   if (user && (await user.matchPassword(password)) && user.state ) {
     
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      isAdmin: user.isAdmin,
-      state:user.state,
-      token: generateToken(user._id),
-    });
-  } else {
-    res.status(401);
-    throw new Error("Invalid email or password");
-  }
-});
+//     res.json({
+//       _id: user._id,
+//       name: user.name,
+//       email: user.email,
+//       isAdmin: user.isAdmin,
+//       state:user.state,
+//       token: generateToken(user._id),
+//     });
+//   } else {
+//     res.status(401);
+//     throw new Error("Invalid email or password");
+//   }
+// });
 
 // @desc    Register new user
 // @rout    POST /api/users/
 // @access  public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password,isAdmin } = req.body;
+  const { name, email, password,isAdmin, twoFA } = req.body;
 
   const userExists = await User.findOne({ email });
 
@@ -203,6 +197,7 @@ const registerUser = asyncHandler(async (req, res) => {
     isAdmin,
     password,
     secret,
+    twoFA
   });
   const token = generateToken(user._id);
   user.token = token;
@@ -220,6 +215,7 @@ const registerUser = asyncHandler(async (req, res) => {
       isAdmin: user.isAdmin,
       state:user.state,
       token,
+      
     });
   } else {
     res.status(400);
