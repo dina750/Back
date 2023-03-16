@@ -14,7 +14,6 @@ import {
     confirmUserAccount, 
     resetPassword,
     updatePassword,
-    reset2,
 
 } from '../controllers/userController.js';
 import { protect, admin } from './../middleware/authMiddleware.js';
@@ -39,7 +38,7 @@ router.route('/:id')
 router.post('/forget-password', forget_password);
 
 // update password route
-router.post('/:userId', updatePassword);
+router.post('/:userId/update', updatePassword);
 
 // confirm user account
 router.get('/confirm/:token', confirmUserAccount);

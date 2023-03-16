@@ -3,14 +3,10 @@ import User from "./../models/userModel.js";
 import generateToken from "./../utils/generateToken.js";
 import nodemailer from "nodemailer";
 import bcryptjs from "bcryptjs";
-import configEmail from "../config/configEmail.js";
-import jwt from "jsonwebtoken";
 import Mailgen from "mailgen";
 import speakeasy from "speakeasy"
 import dotenv from 'dotenv'
 dotenv.config()
-import mongoose from 'mongoose'
-
 dotenv.config('./../.env');
 // @desc    Auth user & token
 // @rout    POST /api/users/login
@@ -100,13 +96,13 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
       throw new Error('Token is missing');
     }
     console.log("this is the url token ",token)
-    const user = await User.findOne({ token});
-        console.log("this is the user token",user.token)
+    const user = await User.findOne({ token });
+        console.log("this is the user token",user)
     if (user) {
       user.state = true;
       await user.save();
   
-      res.redirect('http://localhost:5000/api/users/login'); // or any other URL you want to redirect to after successful confirmation
+      res.redirect('http://localhost:3000/login'); // or any other URL you want to redirect to after successful confirmation
     } else {
       res.status(401);
       throw new Error('Invalid token');
@@ -114,7 +110,11 @@ const confirmUserAccount = asyncHandler(async (req, res) => {
   });
 
 //this is a reset password Email format
-const sendResetPasswordMail = async (firstname, userId, email, token, res) => {
+const sendResetPasswordMail = async ( email, res) => {
+  console.log(email)
+  const userExists = await User.findOne({ email });
+  console.log(userExists._id)
+
   try {
     const mailOptions = {
       from: process.env.EMAIL,
@@ -122,8 +122,8 @@ const sendResetPasswordMail = async (firstname, userId, email, token, res) => {
       subject: "For reset Password",
      html: 
      "<p> Hi " + 
-     firstname + 
-     ', Please copy the link and <a href="http://127.0.0.1:5000/api/users/reset-password/' + userId + '/' + token + '" > reset your password </a>',
+     userExists.firstname + 
+     ', Please copy the link and <a href="http://127.0.0.1:3000/UpdatePassword/' + userExists._id+ '" > reset your password </a>',
 
     };
     transporter.sendMail(mailOptions, function (error, info) {
@@ -314,7 +314,7 @@ const updateUser = asyncHandler(async (req, res) => {
       lastname: updatedUser.lastname,
       email: updatedUser.email,
       isAdmin: updatedUser.isAdmin,
-      state:updateUser.state,
+      state:updatedUser.state,
     });
   } else {
     res.status(401);
@@ -331,7 +331,7 @@ const forget_password = async (req, res) => {
     const id =user.userId
     if (user) {
       
-      sendResetPasswordMail(user.firstname, id, user.email, user.token);
+      sendResetPasswordMail(user.email);
       res.status(200).send({
         success: true,
         msg: "Please  check your inbox of mail and reset your password.",

@@ -61,13 +61,7 @@ app.use(cookieSession({
     keys: ['key1', 'key2']
 }))
 
-const isLoggedIn = (req, res, next) => {
-    if (req.user) {
-        next();
-    } else {
-        res.sendStatus(401);
-    }
-}
+
 
 app.use(passport.initialize());
 
@@ -125,14 +119,7 @@ app.post('/api/auth/google', async (req, res) => {
     }
   });
 
-app.get('/auth/facebook', passport.authenticate('facebook', { scope : 'email' }));
 
-app.get('/facebook/callback',
-	passport.authenticate('facebook', {
-		successRedirect : '/profile',
-        failureRedirect : '/'
-    }
-));
 
 app.get('/logout', function(req, res) {
     req.logout();
