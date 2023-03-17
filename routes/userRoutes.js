@@ -10,7 +10,7 @@ import {
     deleteUser,
     getUserById,
     updateUser,
-    forget_password,
+    forgetPassword,
     confirmUserAccount, 
     resetPassword,
     updatePassword,
@@ -35,13 +35,13 @@ router.route('/:id')
     .put(protect, admin, updateUser);
 
 // forget password route
-router.post('/forget-password', forget_password);
+router.post('/forget-password', forgetPassword);
 
 // update password route
 router.post('/:userId/update', updatePassword);
 
 // confirm user account
-router.get('/confirm/:token', confirmUserAccount);
+router.get('/confirm/:token', confirmUserAccount);  
 
 // reset password route
 router.get('/:userId/:tokenreset', resetPassword);
