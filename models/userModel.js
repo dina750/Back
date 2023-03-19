@@ -14,6 +14,10 @@ const userSchema = mongoose.Schema({
         type: String,
         unique: true
     },
+    cropSelection: {
+        type: String,
+        required: false
+    },
     state:{
         type: Boolean,
         default :false

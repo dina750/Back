@@ -7,7 +7,10 @@ import colors from 'colors'
 import passport from 'passport';
 import cookieSession from 'cookie-session';
 import userRoutes from './routes/userRoutes.js'
-import functionRouter from './routes/functionRoutes.js';
+import productRoutes from './routes/productRoutes.js'
+import orderRoutes from './routes/orderRoutes.js'
+import supplierRoutes from './routes/supplierRoutes.js'
+import uploadRoutes from './routes/uploadRoutes.js'
 import cors from 'cors'
 //2FA libraries
 
@@ -32,9 +35,11 @@ app.use(cors({
     origin: '*'
 }));
 
+app.use('/api', productRoutes);
 app.use('/api/users', userRoutes);
-//app.use('/users',functionRouter);
-
+app.use('/api/orders', orderRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/supplier', supplierRoutes);
 
 
 const __dirname = path.resolve()
