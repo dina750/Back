@@ -37,9 +37,13 @@ const createSupplierProduct = asyncHandler(async (req, res) => {
                 console.log(err);
             });
 
-        const getLatLong = async () => {
-            const latAndLong = await getCordinates
-
+     /*       const getLatLong = async () => {
+                const latAndLong = await getCordinates;
+            
+                if (!latAndLong) {
+                    throw new Error('Unable to geocode address');
+                }
+*/
             const supplier = await Supplier.create({
                 user: req.user._id,
                 name,
@@ -47,8 +51,8 @@ const createSupplierProduct = asyncHandler(async (req, res) => {
                 address,
                 cropSelection,
                 storage,
-                longitude: latAndLong.longitude,
-                latitude: latAndLong.latitude,
+              //  longitude: latAndLong.longitude,
+               // latitude: latAndLong.latitude,
                 image,
                 phonenumber,
                 description,
@@ -60,7 +64,7 @@ const createSupplierProduct = asyncHandler(async (req, res) => {
 
         getLatLong()
     }
-})
+)
 
 // @desc    Get logged in user products
 // @route   GET /api/supplier/myproducts
