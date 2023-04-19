@@ -14,6 +14,8 @@ import {
     confirmUserAccount, 
     resetPassword,
     updatePassword,
+    
+    handleUser,
 
 } from '../controllers/userController.js';
 import { protect, admin } from './../middleware/authMiddleware.js';
@@ -21,18 +23,21 @@ import { protect, admin } from './../middleware/authMiddleware.js';
 
 router.route('/')
     .post(registerUser)
-    .get(protect, admin, getUsers);
+    .get( getUsers);
+
+
+router.post('/auth/google',handleUser);
 
 router.post('/login', authUser);
 
 router.route('/profile')
-    .get(protect, getUserProfile)
-    .put(protect, updateUserProfile);
+    .get( getUserProfile)
+    .put( updateUserProfile);
 
 router.route('/:id')
-    .delete(protect, admin, deleteUser)
-    .get(protect, getUserById)
-    .put(protect, admin, updateUser);
+    .delete( deleteUser)
+    .get( getUserById)
+    .put(  updateUser);
 
 // forget password route
 router.post('/forget-password', forgetPassword);

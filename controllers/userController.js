@@ -6,6 +6,9 @@ import bcryptjs from "bcryptjs";
 import Mailgen from "mailgen";
 import speakeasy from "speakeasy";
 import dotenv from "dotenv";
+import passport from 'passport';
+import { OAuth2Client } from 'google-auth-library';
+
 dotenv.config();
 dotenv.config("./../.env");
 
@@ -14,41 +17,58 @@ dotenv.config("./../.env");
 // @access  public
 // This function is used to authenticate user by handling requests made with email and password.
 const authUser = async (req, res) => {
-  // Retrieve the email and password from request body.
-  const { email, password } = req.body;
+  const { email, password,  } = req.body;
 
-  try {
-    // Retrieves user data based on the email.
-    const user = await User.findOne({ email });
-
-    if (user && (await user.matchPassword(password))) {
-      // checks if user exists and password matches
-      if (!user.state) {
-        // checks if account is not active
+      const user = await User.findOne({ email });
+      if (user && (await user.matchPassword(password))) {
+        if (!user.state) {
+          res.status(401);
+          throw new Error("Your account is not activated");
+        }
+        res.json({
+          _id: user._id,
+          firstname: user.firstname,
+          lastname: user.lastname,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          state: user.state,
+          token: generateToken(user._id),
+        });
+      } else {
         res.status(401);
-        throw new Error("Your account is not activated"); // throws error when account is inactive
+        throw new Error("Invalid email or password");
       }
-
-      res.json({
-        _id: user._id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        state: user.state,
-        token: generateToken(user._id), // generates JWT token and sends it to client
-      });
-    } else {
-      res.status(401);
-      throw new Error("Invalid email or password"); // throws error for invalid credentials
-    }
-  } catch (error) {
-    // catches any errors during the process
-    res.status(500);
-    throw new Error("Server error"); // throws error for any gerneral server errors
-  }
+    
 };
 
+async function handleUser(req, res) {
+  const { email, given_name, family_name } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // User already exists, log them in
+      // Return token or session to front-end to authenticate
+      res.status(200).json({ message: 'User logged in' });
+    } else {
+      // User does not exist, create new user
+      const newUser = new User({
+        email,
+        firstname: given_name,
+        lastname: family_name,
+        password: 'password' // You should generate a random password here
+      });
+
+      await newUser.save();
+
+      // Return token or session to front-end to authenticate
+      res.status(201).json({ message: 'User created' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+}
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -445,4 +465,5 @@ export {
   confirmUserAccount,
   resetPassword,
   updatePassword,
+  handleUser,
 };

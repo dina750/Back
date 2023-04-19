@@ -51,8 +51,6 @@ const createSupplierProduct = asyncHandler(async (req, res) => {
                 address,
                 cropSelection,
                 storage,
-              //  longitude: latAndLong.longitude,
-               // latitude: latAndLong.latitude,
                 image,
                 phonenumber,
                 description,
