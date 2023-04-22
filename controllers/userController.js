@@ -6,8 +6,7 @@ import bcryptjs from "bcryptjs";
 import Mailgen from "mailgen";
 import speakeasy from "speakeasy";
 import dotenv from "dotenv";
-import passport from 'passport';
-import { OAuth2Client } from 'google-auth-library';
+
 
 dotenv.config();
 dotenv.config("./../.env");
@@ -17,28 +16,27 @@ dotenv.config("./../.env");
 // @access  public
 // This function is used to authenticate user by handling requests made with email and password.
 const authUser = async (req, res) => {
-  const { email, password,  } = req.body;
+  const { email, password } = req.body;
 
-      const user = await User.findOne({ email });
-      if (user && (await user.matchPassword(password))) {
-        if (!user.state) {
-          res.status(401);
-          throw new Error("Your account is not activated");
-        }
-        res.json({
-          _id: user._id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          email: user.email,
-          isAdmin: user.isAdmin,
-          state: user.state,
-          token: generateToken(user._id),
-        });
-      } else {
-        res.status(401);
-        throw new Error("Invalid email or password");
-      }
-    
+  const user = await User.findOne({ email });
+  if (user && (await user.matchPassword(password))) {
+    if (!user.state) {
+      res.status(401);
+      throw new Error("Your account is not activated");
+    }
+    res.json({
+      _id: user._id,
+      firstname: user.firstname,
+      lastname: user.lastname,
+      email: user.email,
+      isAdmin: user.isAdmin,
+      state: user.state,
+      token: generateToken(user._id),
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
 };
 
 async function handleUser(req, res) {
@@ -50,23 +48,23 @@ async function handleUser(req, res) {
     if (user) {
       // User already exists, log them in
       // Return token or session to front-end to authenticate
-      res.status(200).json({ message: 'User logged in' });
+      res.status(200).json({ message: "User logged in" });
     } else {
       // User does not exist, create new user
       const newUser = new User({
         email,
         firstname: given_name,
         lastname: family_name,
-        password: 'password' // You should generate a random password here
+        password: "password", // You should generate a random password here
       });
 
       await newUser.save();
 
       // Return token or session to front-end to authenticate
-      res.status(201).json({ message: 'User created' });
+      res.status(201).json({ message: "User created" });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 }
 const transporter = nodemailer.createTransport({
@@ -224,18 +222,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
 // Define an arrow function named 'getUserProfile' which takes two parameters: a request object 'req' and a response object 'res'
 const getUserProfile = asyncHandler(async (req, res) => {
-  // Extract '_id' field from 'req.user' using destructuring assignment
   const { _id } = req.user;
-  // Query the database to get user profile
-  const user = await User.findById(_id).select(
-    "firstname lastname email isAdmin"
-  );
-  // If there is no matching user in the database, set response status to 401 and throw error.
+  const user = await User.findById(_id);
   if (!user) {
     res.status(401);
     throw new Error("User not found!!");
   }
-  // Otherwise, set response body with user profile data as a JSON object
   res.json(user);
 });
 
@@ -243,17 +235,20 @@ const getUserProfile = asyncHandler(async (req, res) => {
 // @rout    PUT /api/users/profile
 // @access  Private
 const updateUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await User.findById(req.body.id);
 
   if (user) {
     // Update user object with new values from request body
     user.firstname = req.body.firstname || user.firstname;
+    user.lastname = req.body.lastname || user.lastname;
     user.email = req.body.email || user.email;
-
-    // Update password only if specified in request body
-    if (req.body.password) {
-      user.password = req.body.password;
-    }
+    user.gender = req.body.gender || user.gender;
+    user.city = req.body.city || user.city;
+    user.address = req.body.address || user.address;
+    user.adressNumber = req.body.adressNumber || user.adressNumber;
+    user.number = req.body.number || user.number;
+    user.zip = req.body.zip || user.zip;
+    user.birthday = req.body.birthday || user.birthday;
 
     // Save updated user object
     const updatedUser = await user.save();
@@ -264,8 +259,13 @@ const updateUserProfile = asyncHandler(async (req, res) => {
       firstname: updatedUser.firstname,
       lastname: updatedUser.lastname,
       email: updatedUser.email,
-      isAdmin: updatedUser.isAdmin,
-      token: generateToken(updatedUser._id),
+      gender: updatedUser.gender,
+      city: updatedUser.city,
+      address: updatedUser.address,
+      adressNumber: updatedUser.adressNumber,
+      number: updatedUser.number,
+      zip: updatedUser.zip,
+      birthday: updatedUser.birthday,
     });
   } else {
     // User not found, throw an error
@@ -273,6 +273,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     throw new Error("User not found!!");
   }
 });
+
 
 // @desc    GET all users
 // @rout    GET /api/users/

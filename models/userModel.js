@@ -18,6 +18,34 @@ const userSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    adressNumber:{
+        type:String,
+        required: false
+    },
+    city:{
+        type: String,
+        required: false
+    },
+    number:{
+        type: Number,
+        required : false
+    },
+    zip:{
+        type: String,
+        required : false
+    },
+    birthday:{
+        type: Date,
+        required : false
+    },
+    gender:{
+        type: String,
+        required : false
+    },
+    phone:{
+        type: Number,
+        required : false
+    },
     state:{
         type: Boolean,
         default :false
