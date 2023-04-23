@@ -35,7 +35,7 @@ const productLendMachineSchema = mongoose.Schema({
         type: String,
         required: true,
     }, 
-    target_plant: {
+    targetPlant: {
         type: String,
         required: true
     },
@@ -45,7 +45,7 @@ const productLendMachineSchema = mongoose.Schema({
         required: true,
         default: 0
     },
-    machine_power: {
+    machinepower: {
         type: String,
         required: true,
         default: 0

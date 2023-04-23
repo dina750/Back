@@ -14,8 +14,8 @@ const router = express.Router()
 
 router
     .route('/')
-    .post(protect, createSupplierProduct)
-    .get(protect, admin, getProducts)
+    .post( createSupplierProduct)
+    .get( getProducts)
 
 router
     .route('/all')

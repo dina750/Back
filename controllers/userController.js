@@ -29,9 +29,22 @@ const authUser = async (req, res) => {
       firstname: user.firstname,
       lastname: user.lastname,
       email: user.email,
-      isAdmin: user.isAdmin,
+      cropSelection: user.cropSelection,
+      address: user.address,
+      adressNumber: user.adressNumber,
+      city: user.city,
+      number: user.number,
+      zip: user.zip,
+      birthday: user.birthday,
+      gender: user.gender,
+      phone: user.phone,
       state: user.state,
+      password: user.password,
       token: generateToken(user._id),
+      isAdmin: user.isAdmin,
+      secret: user.secret,
+      twoFA: user.twoFA,
+      
     });
   } else {
     res.status(401);
@@ -251,7 +264,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
     user.birthday = req.body.birthday || user.birthday;
 
     // Save updated user object
-    const updatedUser = await user.save();
+    const updatedUser = await user.save();  
 
     // Return updated user object along with a token
     res.json({

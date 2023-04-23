@@ -18,6 +18,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    address:{
+        type:String,
+        required: false
+    },
     adressNumber:{
         type:String,
         required: false

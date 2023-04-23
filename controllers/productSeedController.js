@@ -29,10 +29,9 @@ const getSeedProductById = asyncHandler(async (req, res) => {
 // @rout    DELETE /seeds/:id
 // @access  private/ Admin
 const deleteSeedProduct = asyncHandler(async (req, res) => {
-    const productSeed = await ProductSeeds.findById(req.params.id);
+    const productSeed = await ProductSeeds.findOneAndDelete(req.params.id);
 
     if (productSeed) {
-        productSeed.remove()
         res.json({ message: "Product removed" });
     } else {
         res.status(404)
@@ -43,21 +42,16 @@ const deleteSeedProduct = asyncHandler(async (req, res) => {
 // @desc    Create Product Seed
 // @rout    POST /seeds/
 // @access  private/ Admin
-const createSeedProduct = asyncHandler(async (req, res) => {
-    const productSeed = new ProductSeeds({
-        name: 'Sample Seed',
-        user: req.user._id,
-        image: '/images/sample.png',
-        description: 'Sample Description',
-        category: 'Sample Category',
-        price: 0,
-        countInStock: 0,
-        numReviews: 0
-    })
-
-    const createdProduct = await productSeed.save()
-    res.status(201).json(createdProduct)
-})
+const createSeedProduct =asyncHandler( async (req, res) => {
+    try {
+      const product = new ProductSeeds(req.body)
+      const createdProduct = await product.save()
+      res.status(201).json(createdProduct)
+    } catch (error) {
+      console.log(error)
+      res.status(500).json({ message: 'Server error' })
+    }
+  })
 
 // @desc    Update Product Seed
 // @rout    PUT /seeds/:id
