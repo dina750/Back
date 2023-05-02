@@ -37,7 +37,7 @@ const productLendMachineSchema = mongoose.Schema({
     }, 
     targetPlant: {
         type: String,
-        required: true
+        required: false
     },
     reviews: [machineReviewSchema],
     rating: {

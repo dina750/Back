@@ -8,6 +8,7 @@ import orderSeed from './../models/orderSeedModel.js';
 // @access  private
 const addOrderItems = asyncHandler(async (req, res) => {
     const {
+        id,
         orderItems,
         shippingAddress,
         paymentMethod,
@@ -23,7 +24,7 @@ const addOrderItems = asyncHandler(async (req, res) => {
     } else {
         const order = new orderSeed({
             orderItems,
-            user: req.user._id,
+            user: id,
             shippingAddress,
             paymentMethod,
             itemsPrice,
