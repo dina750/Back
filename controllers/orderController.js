@@ -1,123 +1,149 @@
-import express from 'express'
-import asyncHandler from 'express-async-handler'
+import asyncErrorHandler from '../middleware/asyncErrorHandler.js';
+import Order from '../models/orderModel.js';
+import Product from '../models/productModel.js';
+import ErrorHandler from '../utils/errorHandler.js';
+import sendEmail from '../utils/sendEmail.js';
 
-import orderSeed from './../models/orderSeedModel.js';
+export const newOrder = asyncErrorHandler(async (req, res, next) => {
 
-// @desc    create new order
-// @rout    POST /api/orders
-// @access  private
-const addOrderItems = asyncHandler(async (req, res) => {
     const {
-        id,
+        shippingInfo,
         orderItems,
-        shippingAddress,
-        paymentMethod,
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
+        paymentInfo,
         totalPrice,
-    } = req.body
+    } = req.body;
 
-    if (orderItems && orderItems.length === 0) {
-        res.status(400)
-        throw new Error('No Order Items')
-    } else {
-        const order = new orderSeed({
+    const orderExist = await Order.findOne({ paymentInfo });
+
+    if (orderExist) {
+        return next(new ErrorHandler("Order Already Placed", 400));
+    }
+
+    const order = await Order.create({
+        shippingInfo,
+        orderItems,
+        paymentInfo,
+        totalPrice,
+        paidAt: Date.now(),
+        user: req.user._id,
+    });
+
+    await sendEmail({
+        email: req.user.email,
+        templateId: process.env.SENDGRID_ORDER_TEMPLATEID,
+        data: {
+            name: req.user.name,
+            shippingInfo,
             orderItems,
-            user: id,
-            shippingAddress,
-            paymentMethod,
-            itemsPrice,
-            taxPrice,
-            shippingPrice,
             totalPrice,
-        })
+            oid: order._id,
+        }
+    });
 
-        const createdOrder = await order.save()
+    res.status(201).json({
+        success: true,
+        order,
+    });
+});
 
-        res.status(201).json(createdOrder)
+export const getSingleOrderDetails = asyncErrorHandler(async (req, res, next) => {
+
+    const order = await Order.findById(req.params.id).populate("user", "name email");
+
+    if (!order) {
+        return next(new ErrorHandler("Order Not Found", 404));
     }
-})
 
-// @desc    Get order by ID
-// @rout    GET /api/orders/:id
-// @access  private
-const getOrderById = asyncHandler(async (req, res) => {
-    const order = await orderSeed.findById(req.params.id).populate('user', 'name email')
+    res.status(200).json({
+        success: true,
+        order,
+    });
+});
 
-    if (order) {
-        res.json(order);
-    } else {
-        res.status(404)
-        throw new Error('Order not Found')
+
+export const myOrders = asyncErrorHandler(async (req, res, next) => {
+
+    const orders = await Order.find({ user: req.user._id });
+
+    if (!orders) {
+        return next(new ErrorHandler("Order Not Found", 404));
     }
-})
 
-// @desc    Update order to paid
-// @rout    PUT /api/orders/:id/pay
-// @access  private
-const updateOrderToPaid = asyncHandler(async (req, res) => {
-    const order = await orderSeed.findById(req.params.id)
+    res.status(200).json({
+        success: true,
+        orders,
+    });
+});
 
-    if (order) {
-        order.isPaid = true,
-            order.paidAt = Date.now(),
-            order.paymentResult = {
-                id: req.body.id,
-                status: req.body.status,
-                update_time: req.body.update_time,
-                email_address: req.body.payer.email_address
-            }
 
-        const updatedOrder = await order.save()
+export const getAllOrders = asyncErrorHandler(async (req, res, next) => {
 
-        res.json(updatedOrder)
-    } else {
-        res.status(404)
-        throw new Error('Order not Found')
+    const orders = await Order.find();
+
+    if (!orders) {
+        return next(new ErrorHandler("Order Not Found", 404));
     }
-})
 
-// @desc    Update order to delivered
-// @rout    PUT /api/orders/:id/deliver
-// @access  private/Admin
-const updateOrderToDelivered = asyncHandler(async (req, res) => {
-    const order = await orderSeed.findById(req.params.id)
+    let totalAmount = 0;
+    orders.forEach((order) => {
+        totalAmount += order.totalPrice;
+    });
 
-    if (order) {
-        order.isDelivered = true
-        order.deliveredAt = Date.now()
+    res.status(200).json({
+        success: true,
+        orders,
+        totalAmount,
+    });
+});
 
-        const updatedOrder = await order.save()
+export const updateOrder = asyncErrorHandler(async (req, res, next) => {
 
-        res.json(updatedOrder)
-    } else {
-        res.status(404)
-        throw new Error('Order not Found')
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+        return next(new ErrorHandler("Order Not Found", 404));
     }
-})
 
-// @desc    Get logged in user orders
-// @route   GET /api/orders/myorders
-// @access  Private
-const getMyOrders = asyncHandler(async (req, res) => {
-    const orders = await orderSeed.find({ user: req.user._id })
-    res.json(orders)
-})
+    if (order.orderStatus === "Delivered") {
+        return next(new ErrorHandler("Already Delivered", 400));
+    }
 
-// @desc    Get all orders
-// @route   GET /api/orders
-// @access  Private/Admin
-const getOrders = asyncHandler(async (req, res) => {
-    const orders = await orderSeed.find({}).populate('user', 'id name')
-    res.json(orders)
-})
+    if (req.body.status === "Shipped") {
+        order.shippedAt = Date.now();
+        order.orderItems.forEach(async (i) => {
+            await updateStock(i.product, i.quantity)
+        });
+    }
 
-export {
-    addOrderItems,
-    getOrderById,
-    updateOrderToPaid,
-    getMyOrders,
-    getOrders,
-    updateOrderToDelivered
+    order.orderStatus = req.body.status;
+    if (req.body.status === "Delivered") {
+        order.deliveredAt = Date.now();
+    }
+
+    await order.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+        success: true
+    });
+});
+
+async function updateStock(id, quantity) {
+    const product = await Product.findById(id);
+    product.stock -= quantity;
+    await product.save({ validateBeforeSave: false });
 }
+
+export const deleteOrder = asyncErrorHandler(async (req, res, next) => {
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+        return next(new ErrorHandler("Order Not Found", 404));
+    }
+
+    await order.remove();
+
+    res.status(200).json({
+        success: true,
+    });
+});

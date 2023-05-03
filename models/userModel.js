@@ -1,98 +1,82 @@
-import mongoose from 'mongoose'
-import bcrypt from 'bcryptjs'
+import { Schema, model } from 'mongoose';
+import validator from 'validator';
+import bcrypt from 'bcrypt'
+import jsonwebtoken from 'jsonwebtoken';
 
-const userSchema = mongoose.Schema({
-    firstname: {
+
+
+const userSchema = new Schema({
+    name: {
         type: String,
-        required: true
-    },
-    lastname: {
-        type: String,
-        required: true
+        required: [true, "Please Enter Your Name"],
     },
     email: {
         type: String,
-        unique: true
+        required: [true, "Please Enter Your Email"],
+        unique: true,
     },
-    cropSelection: {
+    gender: {
         type: String,
-        required: false
-    },
-    address:{
-        type:String,
-        required: false
-    },
-    adressNumber:{
-        type:String,
-        required: false
-    },
-    city:{
-        type: String,
-        required: false
-    },
-    number:{
-        type: Number,
-        required : false
-    },
-    zip:{
-        type: String,
-        required : false
-    },
-    birthday:{
-        type: Date,
-        required : false
-    },
-    gender:{
-        type: String,
-        required : false
-    },
-    phone:{
-        type: Number,
-        required : false
-    },
-    state:{
-        type: Boolean,
-        default :false
+        required: [true, "Please Enter Gender"]
     },
     password: {
         type: String,
-        required: true
-    }, 
-    token:{
-        type:String
+        required: [true, "Please Enter Your Password"],
+        minLength: [8, "Password should have atleast 8 chars"],
+        select: false,
     },
-    isAdmin: {
-        type: Boolean,
-        required: true,
-        default: false
-    },
-    secret:{
-        type: String,
-        required: false,
-        default: false
-    },
-    twoFA:{
-        type: Boolean,
-        default:false
-    }
-    
-}, {
-    timestamps: true
-})
+    avatar: {
+        public_id: {
+            type: String,
+        },
+        url: {
+            type: String,
+            default: 'https://res.cloudinary.com/silenceiv/image/upload/q_auto:eco/v1617358367/defaultAvatar_wnoogh.png'
 
-userSchema.methods.matchPassword = async function (enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password)
+        }
+
+    },
+    role: {
+        type: String,
+        default: "user",
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+    },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
+});
+
+userSchema.pre("save", async function (next) {
+
+    if (!this.isModified("password")) {
+        next();
+    }
+
+    this.password = await bcrypt.hash(this.password, 10);
+});
+
+userSchema.methods.getJWTToken = function () {
+    return jsonwebtoken.sign({ id: this._id }, "abc123", {
+        expiresIn: "7d"
+    });
 }
 
-userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) {
-        next()
-    }
+userSchema.methods.comparePassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+}
 
-    const salt = await bcrypt.genSalt(10)
-    this.password = await bcrypt.hash(this.password, salt)
-})
+userSchema.methods.getResetPasswordToken = async function () {
 
-const User = mongoose.model('User', userSchema);
+    // generate token
+    const resetToken = randomBytes(20).toString("hex");
 
-export default User;
+    // generate hash token and add to db
+    this.resetPasswordToken = createHash("sha256").update(resetToken).digest("hex");
+    this.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+    return resetToken;
+}
+
+export default model('User', userSchema);

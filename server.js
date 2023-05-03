@@ -1,67 +1,103 @@
-import connectDB from "./../Back/config/db.js";
-import path from "path";
 import express from "express";
+import connectDB from "./../Back/config/db.js";
 import dotenv from "dotenv";
 import morgan from "morgan";
-import colors from "colors";
-import passport from "passport";
-import cookieSession from "cookie-session";
-import userRoutes from "./routes/userRoutes.js";
-import productRoutes from "./routes/productRoutes.js";
-import orderRoutes from "./routes/orderRoutes.js";
-import supplierRoutes from "./routes/supplierRoutes.js";
-import uploadRoutes from "./routes/uploadRoutes.js";
+import userRoutes from "./routes/userRoute.js";
 import cors from "cors";
-//2FA libraries
-import { notFound, errorHandler } from "./middleware/errorMiddlware.js";
+import errorMiddleware from "./middleware/error.js";
+import cookieParser from "cookie-parser";
+import bodyparse from "body-parser";
+import fileUpload from 'express-fileupload';
+import cloudinary from 'cloudinary'
+import items from "./routes/product.js";
+import Product from "./models/product.js";
+import Bid from "./models/bid.js";
+import { Server } from "socket.io";
+import http from 'http';
+import user from './routes/userRoute.js';
+import product from './routes/productMarketRoutes.js'
+import order from './routes/orderRoute.js';
+import payment from './routes/paymentRoute.js';
+import bodyParser from "body-parser";
+
+cloudinary.config({ 
+  cloud_name: 'store', 
+  api_key: '7467848571151', 
+  api_secret: '',
+  secure: true
+});
+
 dotenv.config("./../.env");
+
 connectDB();
 const app = express();
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 app.use(express.json());
+app.use(bodyParser.json())
 app.use(
   cors({
     origin: "*",
   })
 );
-app.use("/api", productRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/supplier", supplierRoutes);
-const __dirname = path.resolve();
-app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "/front/build")));
-
-  app.get("*", (req, res) =>
-    res.sendFile(path.resolve(__dirname, "front", "build", "index.html"))
-  );
-} else {
-  app.get("/", (req, res) => {
-    res.send("API is running");
-  });
-}
-app.use(notFound);
-app.use(errorHandler);
-app.use(
-  cookieSession({
-    name: "tuto-session",
-    keys: ["key1", "key2"],
-  })
-);
+app.use(cookieParser());
+app.use(fileUpload());
+app.get("/", (req, res) => {
+  res.send("API is running");
+});
+app.use(errorMiddleware);
 app.get("/", (req, res) => {
   res.render("pages/index");
 });
-
-
+app.use('/api/v1', user);
+app.use('/api/v1', product);
+app.use('/api/v1', order);
+app.use('/api/v1', payment);
+app.use("/api/products", items);
 const PORT = process.env.PORT || 5000;
 
-app.listen(
-  PORT,
-  console.log(
-    `Server running ${process.env.NODE_ENV} on port ${PORT}`.yellow.bold
-  )
-);
+
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, { cors: { origin: "*" } });
+
+const port = process.env.PORT;
+const startTime = process.hrtime();
+httpServer.listen(port, () => {
+  console.log(`Server is listening on port ${port}`);
+});
+// Listen for Socket.IO connections
+io.on("connection", (socket) => {
+  console.log(`Socket ${socket.id} connected`);
+
+  // Listen for when a user places a bid
+  socket.on("bid", async ({ productId, userId, amount }) => {
+    const product = await Product.findById(productId);
+    const user = await user.findById(userId);
+    // // Check if the bid amount is higher than the current price
+    if (amount > product.currentPrice) {
+    //   // Update the current price of the product and add the bid to the list of bids
+    //   product.currentPrice = amount;
+      product.bids.push(new Bid({ user: user._id, amount }));
+      await product.save();
+    //   // Notify all clients of the new bid
+      io.emit("newBid", { productId, user: user.firstname, amount });
+    }
+  });
+
+  // Listen for when the bidding time is up
+  socket.on("endBidding", async (productId) => {
+    const product = await Product.findById(productId);
+    const winningBid = product.bids.sort((a, b) => b.amount - a.amount)[0];
+    const winner = await user.findById(winningBid.User);
+    if (winner !== null) {
+      winner.cart.push(productId);
+      await winner.save();
+     io.to(`${winner.socketId}`).emit("bidWinner", { productId, amount: winningBid.amount });
+  }
+  });
+  socket.on("disconnect", () => {
+    console.log(`Socket ${socket.id} disconnected`);
+  });
+});
