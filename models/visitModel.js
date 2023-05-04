@@ -62,7 +62,7 @@ const visitSchema = mongoose.Schema({
         {
           type: mongoose.Types.ObjectId,
           ref: "Review",
-          default:false,
+          default:true,
         },
       ],
   
