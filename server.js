@@ -19,6 +19,8 @@ import product from './routes/productMarketRoutes.js'
 import order from './routes/orderRoute.js';
 import payment from './routes/paymentRoute.js';
 import bodyParser from "body-parser";
+import visitRoutes from './routes/visitRoutes.js'
+import projectIdeaRoutes from './routes/projectIdeaRoutes.js'
 
 cloudinary.config({ 
   cloud_name: 'store', 
@@ -54,7 +56,10 @@ app.use('/api/v1', user);
 app.use('/api/v1', product);
 app.use('/api/v1', order);
 app.use('/api/v1', payment);
-app.use("/api/products", items);
+app.use('/api/products', items);
+app.use('/api/visits',visitRoutes)
+app.use('/api/fundMe', projectIdeaRoutes);
+
 const PORT = process.env.PORT || 5000;
 
 
