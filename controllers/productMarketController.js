@@ -2,12 +2,9 @@ import Product from '../models/productModel.js';
 import asyncErrorHandler from '../middleware/asyncErrorHandler.js';
 import SearchFeatures from '../utils/searchFeatures.js';
 import ErrorHandler from '../utils/errorHandler.js';
-import {v2} from 'cloudinary'
-v2.config({
-    cloud_name: "drywarqth",
-    api_key: "537717165839787",
-    api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
-  });
+import {v2 as cloudinary } from 'cloudinary'
+
+  
 export const getAllProducts = asyncErrorHandler(async (req, res, next) => {
 
     const resultPerPage = 12;
@@ -68,6 +65,13 @@ export const getAdminProducts = asyncErrorHandler(async (req, res, next) => {
 
 export const createProduct = (async (req, res, next) => {
 
+    cloudinary.config({
+        cloud_name: 'ramenefarm',
+        api_key: "537717165839787",
+        api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
+      });
+
+      
     let images = [];
     if (typeof req.body.images === "string") {
         images.push(req.body.images);
@@ -78,20 +82,25 @@ export const createProduct = (async (req, res, next) => {
     const imagesLink = [];
 
     for (let i = 0; i < images.length; i++) {
-        const result =  v2.uploader.upload(images[i], {
+        const result = await  cloudinary.uploader.upload(images[i], {
             folder: "products",
+            upload_preset : 'busrmmef'
         });
 
         imagesLink.push({
-            
+            public_id: result.public_id,
+            url: result.secure_url,
         });
     }
 
-    const result =  v2.uploader.upload(req.body.logo, {
+    const result =  cloudinary.uploader.upload(req.body.logo, {
         folder: "brands",
+        upload_preset : 'etgyhobc'
+
     });
     const brandLogo = {
-      
+        public_id: result.public_id,
+        url: result.secure_url,
     };
 
     req.body.brand = {
@@ -99,7 +108,7 @@ export const createProduct = (async (req, res, next) => {
         logo: brandLogo
     }
     req.body.images = imagesLink;
-    req.body.user = "6452b0592de36f1332a244a6";
+    req.body.user = req.user.id;
 
     let specs = [];
     req.body.specifications.forEach((s) => {
@@ -117,6 +126,12 @@ export const createProduct = (async (req, res, next) => {
 
 export const updateProduct = asyncErrorHandler(async (req, res, next) => {
 
+    cloudinary.config({
+        cloud_name: 'ramenefarm',
+        api_key: "537717165839787",
+        api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
+      });
+
     let product = await Product.findById(req.params.id);
 
     if (!product) {
@@ -131,7 +146,7 @@ export const updateProduct = asyncErrorHandler(async (req, res, next) => {
             images = req.body.images;
         }
         for (let i = 0; i < product.images.length; i++) {
-            await v2.uploader.destroy(product.images[i].public_id);
+            await cloudinary.uploader.destroy(product.images[i].public_id);
         }
 
         const imagesLink = [];
@@ -139,6 +154,8 @@ export const updateProduct = asyncErrorHandler(async (req, res, next) => {
         for (let i = 0; i < images.length; i++) {
             const result = await v2.uploader.upload(images[i], {
                 folder: "products",
+                upload_preset : 'busrmmef'
+
             });
 
             imagesLink.push({
@@ -150,9 +167,11 @@ export const updateProduct = asyncErrorHandler(async (req, res, next) => {
     }
 
     if (req.body.logo.length > 0) {
-        await v2.uploader.destroy(product.brand.logo.public_id);
+        await cloudinary.uploader.destroy(product.brand.logo.public_id);
         const result = await v2.uploader.upload(req.body.logo, {
             folder: "brands",
+            upload_preset : 'etgyhobc'
+
         });
         const brandLogo = {
             public_id: result.public_id,
@@ -186,17 +205,14 @@ export const updateProduct = asyncErrorHandler(async (req, res, next) => {
 
 export const deleteProduct = asyncErrorHandler(async (req, res, next) => {
 
+
     const product = await Product.findById(req.params.id);
 
     if (!product) {
         return next(new ErrorHandler("Product Not Found", 404));
     }
 
-    for (let i = 0; i < product.images.length; i++) {
-        await v2.uploader.destroy(product.images[i].public_id);
-    }
-
-    await product.remove();
+    await product.deleteOne();
 
     res.status(201).json({
         success: true

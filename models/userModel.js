@@ -31,7 +31,6 @@ const userSchema = new Schema({
         },
         url: {
             type: String,
-            default: 'https://res.cloudinary.com/silenceiv/image/upload/q_auto:eco/v1617358367/defaultAvatar_wnoogh.png'
 
         }
 

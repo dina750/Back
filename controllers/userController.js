@@ -8,22 +8,32 @@ import { v2 as cloudinary } from "cloudinary";
 import {config} from "../config/configCloud.js"
 
 cloudinary.config({
-  cloud_name: "drywarqth",
+  cloud_name: "ramenefarm",
   api_key: "537717165839787",
   api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
 });
 
+const img="./controllers/avatar.jpg";
+
+
+
 export const registerUser = async (req, res, next) => {
+  cloudinary.config({
+    cloud_name: "ramenefarm",
+    api_key: "537717165839787",
+    api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
+  });
+  
     try {
           const myCloud = await cloudinary.uploader.upload(req.body.avatar, {
             folder: "avatars",
             width: 150,
             crop: "scale",
+            upload_preset : 'xtsrnebr'
+
           });
         console.log(myCloud);
-      } catch (error) {
-        console.error('Cloudinary upload error:', error);
-      }
+      
 
   const { name, email, gender, password } = req.body;
 
@@ -33,11 +43,15 @@ export const registerUser = async (req, res, next) => {
     gender,
     password,
     avatar: {
-     
+      public_id: myCloud.public_id,
+      url: myCloud.secure_url,
     },
   });
 
   sendToken(user, 201, res);
+} catch (error) {
+  console.error('Cloudinary upload error:', error);
+}
 };
 
 export const loginUser = asyncErrorHandler(async (req, res, next) => {
