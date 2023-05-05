@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcrypt'
 import jsonwebtoken from 'jsonwebtoken';
-
+import mongoose from 'mongoose'
 
 
 const userSchema = new Schema({
@@ -35,6 +35,11 @@ const userSchema = new Schema({
         }
 
     },
+    cart: [{
+        type:  mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: false,
+    }],
     role: {
         type: String,
         default: "user",

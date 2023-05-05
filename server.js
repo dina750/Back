@@ -79,7 +79,7 @@ io.on("connection", (socket) => {
   // Listen for when a user places a bid
   socket.on("bid", async ({ productId, userId, amount }) => {
     const product = await Product.findById(productId);
-    const user = await user.findById(userId);
+    const user = await User.findById(userId);
     // // Check if the bid amount is higher than the current price
     if (amount > product.currentPrice) {
     //   // Update the current price of the product and add the bid to the list of bids
@@ -95,13 +95,25 @@ io.on("connection", (socket) => {
   socket.on("endBidding", async (productId) => {
     const product = await Product.findById(productId);
     const winningBid = product.bids.sort((a, b) => b.amount - a.amount)[0];
-    const winner = await user.findById(winningBid.User);
+    console.log(winningBid);
+    // Add the product to the winner's cart and notify the winner
+   
+    const winner = await User.findById(winningBid.user);
+    console.log(winner,"winner");
     if (winner !== null) {
+
       winner.cart.push(productId);
+    
       await winner.save();
+    
+    
+  
      io.to(`${winner.socketId}`).emit("bidWinner", { productId, amount: winningBid.amount });
   }
+    
   });
+
+  // Disconnect Socket.IO connection
   socket.on("disconnect", () => {
     console.log(`Socket ${socket.id} disconnected`);
   });
