@@ -79,7 +79,7 @@ io.on("connection", (socket) => {
   // Listen for when a user places a bid
   socket.on("bid", async ({ productId, userId, amount }) => {
     const product = await Product.findById(productId);
-    const user = await User.findById(userId);
+    const user = await user.findById(userId);
     // // Check if the bid amount is higher than the current price
     if (amount > product.currentPrice) {
     //   // Update the current price of the product and add the bid to the list of bids
