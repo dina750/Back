@@ -3,11 +3,10 @@ import asyncErrorHandler from '../middleware/asyncErrorHandler.js';
 import SearchFeatures from '../utils/searchFeatures.js';
 import ErrorHandler from '../utils/errorHandler.js';
 import {v2} from 'cloudinary'
-v2.config({ 
-    cloud_name: 'store', 
-    api_key: '7467848571151', 
-    api_secret: '',
-    secure: true
+v2.config({
+    cloud_name: "drywarqth",
+    api_key: "537717165839787",
+    api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
   });
 export const getAllProducts = asyncErrorHandler(async (req, res, next) => {
 
@@ -67,7 +66,7 @@ export const getAdminProducts = asyncErrorHandler(async (req, res, next) => {
     });
 });
 
-export const createProduct = asyncErrorHandler(async (req, res, next) => {
+export const createProduct = (async (req, res, next) => {
 
     let images = [];
     if (typeof req.body.images === "string") {
@@ -79,22 +78,20 @@ export const createProduct = asyncErrorHandler(async (req, res, next) => {
     const imagesLink = [];
 
     for (let i = 0; i < images.length; i++) {
-        const result = await v2.uploader.upload(images[i], {
+        const result =  v2.uploader.upload(images[i], {
             folder: "products",
         });
 
         imagesLink.push({
-            public_id: result.public_id,
-            url: result.secure_url,
+            
         });
     }
 
-    const result = await v2.uploader.upload(req.body.logo, {
+    const result =  v2.uploader.upload(req.body.logo, {
         folder: "brands",
     });
     const brandLogo = {
-        public_id: result.public_id,
-        url: result.secure_url,
+      
     };
 
     req.body.brand = {
@@ -102,7 +99,7 @@ export const createProduct = asyncErrorHandler(async (req, res, next) => {
         logo: brandLogo
     }
     req.body.images = imagesLink;
-    req.body.user = req.user.id;
+    req.body.user = "6452b0592de36f1332a244a6";
 
     let specs = [];
     req.body.specifications.forEach((s) => {

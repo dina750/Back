@@ -24,21 +24,11 @@ export const processPayment = asyncErrorHandler(async (req, res, next) => {
     params["EMAIL"] = email;
     params["MOBILE_NO"] = phoneNo;
 
-    let paytmChecksum = generateSignature(params, process.env.PAYTM_MERCHANT_KEY);
-    paytmChecksum.then(function (checksum) {
+    let paytmChecksum = "848dvdvdv848dv"
+    res.status(200).json({
+        paytmChecksum})
+        
 
-        let paytmParams = {
-            ...params,
-            "CHECKSUMHASH": checksum,
-        };
-
-        res.status(200).json({
-            paytmParams
-        });
-
-    }).catch(function (error) {
-        console.log(error);
-    });
 });
 
 // Paytm Callback
@@ -49,7 +39,7 @@ export function paytmResponse(req, res, next) {
     let paytmChecksum = req.body.CHECKSUMHASH;
     delete req.body.CHECKSUMHASH;
 
-    let isVerifySignature = verifySignature(req.body, process.env.PAYTM_MERCHANT_KEY, paytmChecksum);
+    let isVerifySignature = isVerifySignature(req.body, process.env.PAYTM_MERCHANT_KEY, paytmChecksum);
     if (isVerifySignature) {
         // console.log("Checksum Matched");
 

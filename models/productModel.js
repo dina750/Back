@@ -40,27 +40,30 @@ const productSchema = new Schema({
         {
             public_id: {
                 type: String,
-                required: true
+                required: false
             },
             url: {
                 type: String,
-                required: true
+                required: false,
+                default: "https://e7.pngegg.com/pngimages/725/912/png-clipart-sunflower-seeds-sunflower-seeds.png"
             }
         }
     ],
     brand: {
         name: {
             type: String,
-            required: true
+            required: false,
+            default: "Default Brand Name"
         },
         logo: {
             public_id: {
                 type: String,
-                required: true,
+                required: false
             },
             url: {
                 type: String,
-                required: true,
+                required: false,
+                default: "https://img.lovepik.com/free-png/20211212/lovepik-whole-grains-png-image_401512728_wh1200.png"
             }
         }
     },
@@ -107,7 +110,6 @@ const productSchema = new Schema({
             }
         }
     ],
-
     user: {
         type: Schema.ObjectId,
         ref: "User",

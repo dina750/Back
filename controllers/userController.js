@@ -5,12 +5,12 @@ import ErrorHandler from "../utils/errorHandler.js";
 import sendEmail from "../utils/sendEmail.js";
 import { createHash } from "crypto";
 import { v2 as cloudinary } from "cloudinary";
+import {config} from "../config/configCloud.js"
 
 cloudinary.config({
-    cloud_name :'drexcmawh',
-  api_key: '749992466314972',
-  api_secret: 'p0Bz1rVzCyVtVWX9ZafYpyl5UgY',
-  cloudinary_storage: 'pza5zln6',
+  cloud_name: "drywarqth",
+  api_key: "537717165839787",
+  api_secret: "a69CBbuO9hrqUa3ohOin5SxXwvE"
 });
 
 export const registerUser = async (req, res, next) => {
@@ -19,7 +19,6 @@ export const registerUser = async (req, res, next) => {
             folder: "avatars",
             width: 150,
             crop: "scale",
-            upload_preset : 'pza5zln6'
           });
         console.log(myCloud);
       } catch (error) {

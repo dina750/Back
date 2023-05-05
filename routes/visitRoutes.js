@@ -59,8 +59,7 @@ router
             { title: { $regex: regex } },
             { city: { $regex: regex } },
             { address: { $regex: regex } },
-            { price: { $eq: parseInt(searchText) } },
-            { maxGroupSize: { $eq: parseInt(searchText) } },
+            
 
           ],
         });
@@ -74,29 +73,7 @@ router
   
   
 
-router.get('/search-numbers', async (req, res) => {
-  const searchText = req.query.query;
-  if (!searchText) {
-    res.status(400).json({ message: 'Query parameter is required' });
-  } else {
-    try {
-      const number = Number(searchText);
-      const visits = await Visit.find({
-        $or: [
-          { title: { $regex: searchText, $options: 'i' } },
-          { city: { $regex: searchText, $options: 'i' } },
-          { address: { $regex: searchText, $options: 'i' } },
-          { price: { $gte: number, $lte: number } },
-          { maxGroupSize: { $gte: number, $lte: number } },
-        ],
-      });
-      res.status(200).json(visits);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Failed to retrieve visits' });
-    }
-  }
-});
+
 
 
 

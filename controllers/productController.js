@@ -5,7 +5,7 @@ import User from '../models/userModel.js';
 const addProduct = asyncHandler(async (req, res) => {
   const { name, description, imageUrl, startingPrice, currentPrice, bids, biddingEndTime,id } = req.body;
  
-  const creator = await User.findById(id);  
+  const creator = await User.findById(id);   
   try {
     const newProduct = await Product.create({ name, description, imageUrl, creator, startingPrice, currentPrice, bids, biddingEndTime ,});
     res.status(201).json(newProduct);

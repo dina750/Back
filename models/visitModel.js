@@ -1,29 +1,6 @@
 import mongoose from 'mongoose'
  
-/*const visitReviewSchema = mongoose.Schema({
-    name: {
-        type: String,
-        requried: true,
-    },
-    rating: {
-        type: Number,
-        requried: true,
-    }
- 
-}, {
-    timestamps: true
-})*/
- 
 const visitSchema = mongoose.Schema({
-    /*user: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'User'
-    },*/  
-   /* id: {
-        type: String,
-        required: true
-    },*/
     title: {
         type: String,
         required: true,
